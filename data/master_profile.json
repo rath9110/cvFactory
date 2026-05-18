@@ -1,0 +1,114 @@
+{
+  "name": "Rasmus Thunberg",
+  "headline": "TODO — one-line professional headline (e.g., 'Delivery-focused product/program manager bridging strategy and execution across multi-market rollouts')",
+  "contact": {
+    "email": "rath701@gmail.com",
+    "location": "TODO",
+    "linkedin": "TODO"
+  },
+  "experience_blocks": [
+    {
+      "id": "mitigram",
+      "company": "Mitigram",
+      "role": "TODO — your title",
+      "period": "TODO",
+      "context": "TODO — what Mitigram is and what your team owned",
+      "responsibilities": [
+        "TODO — bullet"
+      ],
+      "outcomes": [
+        "Led consent rollout across 60+ markets (TODO — refine wording, add timeframe)"
+      ],
+      "tools_methods": [
+        "TODO"
+      ],
+      "transferable_themes": [
+        "multi-market rollout",
+        "cross-stakeholder delivery"
+      ]
+    },
+    {
+      "id": "cdp-multibrand",
+      "company": "TODO — the retail group (COS/ARKET parent?)",
+      "role": "TODO",
+      "period": "TODO",
+      "context": "Multi-brand retail group, CDP vendor evaluation across 4 brands",
+      "responsibilities": [
+        "TODO"
+      ],
+      "outcomes": [
+        "Led CDP vendor evaluation across 4 brands"
+      ],
+      "tools_methods": [
+        "vendor evaluation",
+        "stakeholder management"
+      ],
+      "transferable_themes": [
+        "identity resolution",
+        "vendor selection",
+        "cross-brand alignment"
+      ]
+    }
+  ],
+  "proof_library": [
+    {
+      "id": "consent-60-markets",
+      "claim": "Multi-market consent rollout across 60+ markets",
+      "category": "scale",
+      "source_experience_id": "mitigram",
+      "context": "Regulatory/privacy delivery at Mitigram",
+      "metric": "60+ markets"
+    },
+    {
+      "id": "cdp-eval-4brands",
+      "claim": "CDP vendor evaluation across 4 brands",
+      "category": "strategy",
+      "source_experience_id": "cdp-multibrand",
+      "context": "Multi-brand retail data infrastructure decision",
+      "metric": "4 brands"
+    }
+  ],
+  "tone_rules": [
+    {
+      "id": "no-overselling",
+      "rule": "No overselling — strategically honest framing only",
+      "rationale": "Generic superlatives undermine credibility; specifics build it"
+    },
+    {
+      "id": "show-dont-tell",
+      "rule": "Show, don't tell — favour concrete examples over adjectives",
+      "rationale": "Specifics differentiate; adjectives do not"
+    },
+    {
+      "id": "address-gaps",
+      "rule": "Address genuine gaps transparently via adjacent experience",
+      "rationale": "Hiring managers spot faked claims; honest framing converts better"
+    },
+    {
+      "id": "specifics-over-superlatives",
+      "rule": "Always prefer numbers, names, and concrete artefacts over superlatives",
+      "rationale": "'60+ markets' is stronger than 'extensive experience'"
+    }
+  ],
+  "positioning_tensions": [
+    {
+      "id": "breadth-vs-specialization",
+      "tension": "Breadth vs. specialization",
+      "default_lean": "Lead with breadth and connect-the-dots framing",
+      "when_to_flip": "Job ad emphasizes single domain depth (e.g., 'deep expertise in X') — lead with the closest specialism instead"
+    },
+    {
+      "id": "execution-vs-strategy",
+      "tension": "Execution vs. strategy",
+      "default_lean": "Position as execution-led with strategic judgement",
+      "when_to_flip": "Job ad emphasizes strategy/advisory framing — lead with strategic outcomes and decision-shaping work"
+    },
+    {
+      "id": "tech-vs-business",
+      "tension": "Tech vs. business",
+      "default_lean": "Bridge — fluent in tech, owns business outcomes",
+      "when_to_flip": "If role is fully technical (engineering, ML), don't lead with business framing; if fully business (sales, GTM), drop the tech depth signal"
+    }
+  ],
+  "learned_preferences": []
+}
