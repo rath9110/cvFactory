@@ -4,12 +4,12 @@ A strategic CV and cover letter generator with feedback loops. Built around a st
 
 ## Phases
 
-1. **Master profile + job ad analyzer → strategic brief** ← _you are here_
-2. Cover letter generation with self-critique
+1. Master profile + job ad analyzer → strategic brief
+2. **Cover letter generation with self-critique** ← _you are here_
 3. CV variant generation + PDF export
 4. Feedback loop with learned preferences
 
-## Phase 1 — what it does
+## What it does (Phases 1–2)
 
 Paste a job ad. The analyzer:
 
@@ -17,7 +17,12 @@ Paste a job ad. The analyzer:
 - Classifies each against your master profile: **strong**, **partial — reframeable**, **gap**
 - Produces a positioning memo: what to lead with, what to reframe, what not to fake
 
-The output is a brief you read **before** writing anything. That alone reshapes the application.
+Then click **Generate cover letter** — two LLM passes run in sequence:
+
+1. **Generator** writes a structured draft (opening / bridge paragraphs / optional gap acknowledgement / closing) anchored on the strategic brief and the proof library.
+2. **Self-critique** scores the draft on relevance, specificity, honesty, and tone-fit; annotates problem sentences with issue type (unsupported claim, generic platitude, drift, tone mismatch, voice off, or strength); and offers concrete rewrites.
+
+The annotated draft is editable in-place. Click **Apply rewrite** on any annotation to splice the suggestion into the textarea.
 
 ## Run it
 
@@ -36,17 +41,21 @@ Without an API key the analyzer returns a mock response so you can validate the 
 ```
 app/
   page.tsx                 home page (server component)
-  analyzer-client.tsx      paste-and-render UI
-  api/analyze/route.ts     POST endpoint: job ad → strategic brief
+  analyzer-client.tsx      paste-and-render UI for the analyzer
+  cover-letter-view.tsx    cover letter draft + annotated critique UI
+  api/analyze/route.ts     POST: job ad → strategic brief
+  api/cover/route.ts       POST: { jobAd, brief } → { letter, critique }
   globals.css              tailwind entry
   layout.tsx               root layout
 data/
   master_profile.json      the single source of truth — edit by hand for now
 lib/
-  profile-types.ts         zod schemas + types for profile and brief
+  profile-types.ts         zod schemas + types (profile, brief, cover letter, critique)
   load-profile.ts          read+validate master_profile.json
   anthropic.ts             SDK wrapper, mock-fallback helpers
   analyzer.ts              prompt + analyzer entrypoint
+  cover-generator.ts       prompt + generator entrypoint (with mock)
+  critique.ts              prompt + critique entrypoint (with mock)
 ```
 
 ## Editing your master profile
@@ -55,4 +64,5 @@ lib/
 
 ## Next phases
 
-Phases 2–4 wire onto the same brief output. Start there before adding generation.
+- **Phase 3** — CV variant generation reweighting `experience_blocks` + `proof_library` against the strategic brief, with PDF/docx export matching the LaTeX layout.
+- **Phase 4** — capture diffs between the generated draft and your edits across applications, surfacing learned preferences that flow back into `master_profile.json`.

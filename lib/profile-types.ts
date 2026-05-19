@@ -131,3 +131,80 @@ export const StrategicBriefSchema = z.object({
 
 export type Requirement = z.infer<typeof RequirementSchema>;
 export type StrategicBrief = z.infer<typeof StrategicBriefSchema>;
+
+export const BridgeParagraphSchema = z.object({
+  text: z.string(),
+  proof_point_ids: z
+    .array(z.string())
+    .default([])
+    .describe("Proof points from the master profile referenced in this paragraph"),
+});
+
+export const CoverLetterSchema = z.object({
+  recipient: z
+    .string()
+    .optional()
+    .describe("Hiring team / specific person if inferable from the ad, else omit"),
+  opening: z
+    .string()
+    .describe("Genuine connection point — why this company, why now. Not filler."),
+  bridge: z
+    .array(BridgeParagraphSchema)
+    .describe("1-3 paragraphs bridging candidate experience to the role's specific needs"),
+  gap_acknowledgement: z
+    .string()
+    .optional()
+    .describe(
+      "Transparent acknowledgement of a genuine gap, framed via adjacent experience. Omit if no gap warrants it."
+    ),
+  closing: z.string().describe("Concrete forward statement — what comes next"),
+  signoff: z.string().describe("e.g., 'Best regards, Rasmus Thunberg'"),
+});
+
+export const ANNOTATION_ISSUES = [
+  "unsupported_claim",
+  "generic_platitude",
+  "drift_from_brief",
+  "tone_mismatch",
+  "voice_unnatural",
+  "good",
+] as const;
+
+export const AnnotationSchema = z.object({
+  target_section: z.enum(["opening", "bridge", "gap_acknowledgement", "closing"]),
+  target_text: z
+    .string()
+    .describe("The exact substring being annotated (so the UI can locate it)"),
+  issue: z.enum(ANNOTATION_ISSUES),
+  note: z.string().describe("One-line explanation of the issue or strength"),
+  suggested_rewrite: z
+    .string()
+    .optional()
+    .describe("Concrete rewrite. Only for non-'good' issues."),
+});
+
+export const CritiqueScoresSchema = z.object({
+  relevance: z.number().min(1).max(10).describe("Alignment with the strategic brief"),
+  specificity: z.number().min(1).max(10).describe("Concrete vs generic"),
+  honesty: z
+    .number()
+    .min(1)
+    .max(10)
+    .describe("Claims supported by the proof library / profile; no overselling"),
+  tone_fit: z.number().min(1).max(10).describe("Adherence to tone_rules"),
+});
+
+export const CritiqueSchema = z.object({
+  scores: CritiqueScoresSchema,
+  annotations: z.array(AnnotationSchema),
+  verdict: z
+    .string()
+    .describe("2-3 sentence overall verdict and the single most important thing to fix"),
+});
+
+export type BridgeParagraph = z.infer<typeof BridgeParagraphSchema>;
+export type CoverLetter = z.infer<typeof CoverLetterSchema>;
+export type Annotation = z.infer<typeof AnnotationSchema>;
+export type AnnotationIssue = (typeof ANNOTATION_ISSUES)[number];
+export type CritiqueScores = z.infer<typeof CritiqueScoresSchema>;
+export type Critique = z.infer<typeof CritiqueSchema>;
