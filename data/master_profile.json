@@ -1,71 +1,256 @@
 {
   "name": "Rasmus Thunberg",
-  "headline": "TODO — one-line professional headline (e.g., 'Delivery-focused product/program manager bridging strategy and execution across multi-market rollouts')",
+  "headline": "Operations & delivery lead bridging strategy and execution across customer data, MarTech, and identity at multi-brand scale",
+  "profile_summary": "Operations and delivery lead with 2.5+ years of consulting experience driving customer data and MarTech delivery at scale. Currently leads the horizontal delivery of a portfolio of parallel customer data and MarTech initiatives across four H&M Group brands in 60+ markets — sitting at the bridge between global operations and local market execution. Strong analytical foundation combined with cross-functional delivery experience across Commercial, Legal, Architecture, and engineering. Heavy daily user of AI tools to compound own output and the processes built.",
   "contact": {
-    "email": "rath701@gmail.com",
-    "location": "TODO",
-    "linkedin": "TODO"
+    "email": "rasmus.a.s.thunberg@gmail.com",
+    "phone": "+46 70 092 12 34",
+    "location": "Stockholm, Sweden (open for relocation)",
+    "linkedin": "linkedin.com/in/rasmus-t-729a80135",
+    "github": "github.com/rath9110"
   },
   "experience_blocks": [
     {
-      "id": "mitigram",
-      "company": "Mitigram",
-      "role": "TODO — your title",
-      "period": "TODO",
-      "context": "TODO — what Mitigram is and what your team owned",
+      "id": "stream-lead-customer-data",
+      "company": "Tata Consultancy Services / H&M Group — Portfolio Brands",
+      "role": "Stream Lead, Customer Data",
+      "period": "Jun 2025 — Present",
+      "context": "Own the horizontal delivery of a portfolio of customer data and MarTech initiatives across four global retail brands (COS, ARKET, &Other Stories, Weekday) operating in 60+ markets. The stream sits at the intersection of customer engagement, data, and platform operations — directly shaping how brands acquire, retain, and grow their customer base.",
       "responsibilities": [
-        "TODO — bullet"
+        "Bridge global operations with local market execution, coordinating customer data migrations and integrations across CRM, CDP, and Identity Lifecycle Management (ILM) systems as brands launch and localise in new geographies.",
+        "Define and document the operational playbooks and integration workflows that enable scalable adoption of new processes by engineering and brand-side teams — reducing onboarding friction and standardising how the stream operates across markets.",
+        "Influence and align cross-functional stakeholders across Architecture, Legal, Privacy, and Commercial — translating ambiguous, competing constraints into clear requirements and adopted decisions.",
+        "Track operational metrics and budget consumption across contributing teams, surfacing trends and risks to leadership before they escalate.",
+        "Drive quarterly roadmap planning and prioritization — balancing commercial goals against legal and regulatory constraints across multiple markets.",
+        "Use AI tools daily to design, draft, and accelerate the workflows owned by the stream."
       ],
       "outcomes": [
-        "Led consent rollout across 60+ markets (TODO — refine wording, add timeframe)"
+        "Led the rollout of a consent and first-party data architecture across COS and ARKET that materially expanded the marketable customer base — directly enabling more effective lifecycle engagement and retention activity.",
+        "Implemented an auto-opt-in strategy in close dialogue with Legal and Data Protection, materially expanding the addressable customer base."
       ],
       "tools_methods": [
-        "TODO"
+        "CRM",
+        "CDP",
+        "Identity Lifecycle Management (ILM)",
+        "consent architecture",
+        "first-party data",
+        "customer data migrations",
+        "operational playbooks",
+        "stakeholder management",
+        "Jira",
+        "Confluence",
+        "AI tools (Claude, Cursor)"
       ],
       "transferable_themes": [
         "multi-market rollout",
-        "cross-stakeholder delivery"
+        "multi-brand coordination",
+        "cross-stakeholder delivery",
+        "regulatory/commercial trade-off",
+        "horizontal portfolio delivery",
+        "platform-and-process design"
       ]
     },
     {
-      "id": "cdp-multibrand",
-      "company": "TODO — the retail group (COS/ARKET parent?)",
-      "role": "TODO",
-      "period": "TODO",
-      "context": "Multi-brand retail group, CDP vendor evaluation across 4 brands",
+      "id": "delivery-lead-arket",
+      "company": "Tata Consultancy Services / H&M Group",
+      "role": "Delivery Lead / Product Owner, ARKET.com",
+      "period": "Sep 2024 — Sep 2025",
+      "context": "End-to-end delivery and project lead for ARKET's full e-commerce re-platforming, with direct focus on customer journey coherence and identity resolution.",
       "responsibilities": [
-        "TODO"
+        "Owned product backlog in Jira; led sprint grooming, sprint planning, and follow-up against delivery targets.",
+        "Translated customer journey and product requirements into clear, prioritised backlog items.",
+        "Coordinated deliveries between ARKET's e-commerce team, developers, and external dependencies — identified cross-functional risks and resolved blockers before they hit the timeline.",
+        "Facilitated Scrum ceremonies and workshops focused on delivery efficiency and cross-functional collaboration.",
+        "Partnered with UX, brand, and engineering to make trade-off decisions that protected the coherence and quality of the customer journey through a complex re-platforming."
       ],
       "outcomes": [
-        "Led CDP vendor evaluation across 4 brands"
+        "Led the rollout of 'Omni-id' — ARKET's identity resolution initiative — unifying fragmented customer data across online and offline touchpoints into a single customer profile, directly enabling more accurate personalisation, improved CRM targeting, and lower identity duplication."
       ],
       "tools_methods": [
-        "vendor evaluation",
-        "stakeholder management"
+        "Jira",
+        "Agile/Scrum",
+        "identity resolution",
+        "backlog management",
+        "stakeholder management",
+        "e-commerce platforms"
       ],
       "transferable_themes": [
         "identity resolution",
-        "vendor selection",
-        "cross-brand alignment"
+        "re-platforming delivery",
+        "cross-functional trade-off",
+        "customer journey coherence"
+      ]
+    },
+    {
+      "id": "data-analyst-wholesale",
+      "company": "Tata Consultancy Services / H&M Group",
+      "role": "Data Analyst / Business Expert — Wholesale Data",
+      "period": "May 2024 — Sep 2024",
+      "context": "Owned analytics and dashboards for wholesale teams across H&M Group brands.",
+      "responsibilities": [
+        "Owned end-to-end delivery of new dashboards for wholesale teams across brands — from requirements gathering with the business to data flows and Power BI visualisation.",
+        "Built Splunk dashboards to assess incident impact and support cost optimisation decisions.",
+        "Led change management for one brand's wholesale team adopting SAP, including end-user training and adoption follow-up."
+      ],
+      "outcomes": [
+        "Delivered dashboards giving leadership real-time visibility on operational metrics and customer impact across brands."
+      ],
+      "tools_methods": [
+        "Power BI",
+        "Splunk",
+        "SQL",
+        "ETL pipeline design",
+        "SAP",
+        "change management"
+      ],
+      "transferable_themes": [
+        "end-to-end analytics delivery",
+        "requirements gathering",
+        "user adoption"
+      ]
+    },
+    {
+      "id": "cloud-ops-engineer",
+      "company": "Tata Consultancy Services / H&M Group",
+      "role": "Cloud Operations Engineer / Problem Manager",
+      "period": "Dec 2023 — Apr 2024",
+      "context": "Operations and incident escalation under ITIL-based processes.",
+      "responsibilities": [
+        "Led structured root-cause analysis on escalated tickets under ITIL-based processes — shifting reactive issue handling into preventive process improvement.",
+        "Built automated tracking scripts for throughput, output, and code quality."
+      ],
+      "outcomes": [
+        "Turned reactive problem handling into preventive process improvement through structured root-cause analysis."
+      ],
+      "tools_methods": [
+        "ITIL",
+        "Azure",
+        "automation scripting"
+      ],
+      "transferable_themes": [
+        "incident analysis",
+        "process improvement",
+        "automation"
+      ]
+    },
+    {
+      "id": "trainee-business-analyst",
+      "company": "Tata Consultancy Services",
+      "role": "Trainee — Business Analyst",
+      "period": "Sep 2023 — Nov 2023",
+      "context": "Accelerated traineeship in project delivery and applied analytics.",
+      "responsibilities": [
+        "Accelerated traineeship in project delivery (Agile/Scrum), structured requirements gathering, and applied ML in Python (Scikit-learn)."
+      ],
+      "outcomes": [],
+      "tools_methods": [
+        "Agile/Scrum",
+        "Python",
+        "Scikit-learn"
+      ],
+      "transferable_themes": [
+        "requirements gathering",
+        "applied ML"
+      ]
+    },
+    {
+      "id": "thunberg-rask-cofounder",
+      "company": "Thunberg & Rask Handelsbolag",
+      "role": "Co-Founder",
+      "period": "Apr 2021 — Sep 2023",
+      "context": "Co-founded and operated a sustainability-focused service business (death-estate clearance and cleaning, with a strong reuse and recycling focus) end-to-end alongside full-time studies.",
+      "responsibilities": [
+        "Direct ownership of customer acquisition, customer relationships, pricing, and operations.",
+        "Supplier negotiation and operational delivery from scratch."
+      ],
+      "outcomes": [
+        "Built and ran a sustainability-focused service business end-to-end alongside full-time studies."
+      ],
+      "tools_methods": [
+        "small-business operations",
+        "customer acquisition",
+        "pricing"
+      ],
+      "transferable_themes": [
+        "entrepreneurial ownership",
+        "end-to-end accountability",
+        "sustainability framing"
       ]
     }
   ],
   "proof_library": [
     {
       "id": "consent-60-markets",
-      "claim": "Multi-market consent rollout across 60+ markets",
+      "claim": "Lead horizontal customer-data delivery across 4 brands in 60+ markets",
       "category": "scale",
-      "source_experience_id": "mitigram",
-      "context": "Regulatory/privacy delivery at Mitigram",
-      "metric": "60+ markets"
+      "source_experience_id": "stream-lead-customer-data",
+      "context": "Stream Lead at H&M Group Portfolio Brands — COS, ARKET, &Other Stories, Weekday",
+      "metric": "4 brands, 60+ markets"
     },
     {
-      "id": "cdp-eval-4brands",
-      "claim": "CDP vendor evaluation across 4 brands",
-      "category": "strategy",
-      "source_experience_id": "cdp-multibrand",
-      "context": "Multi-brand retail data infrastructure decision",
-      "metric": "4 brands"
+      "id": "consent-architecture-rollout",
+      "claim": "Rolled out consent and first-party data architecture across COS and ARKET; materially expanded marketable customer base",
+      "category": "delivery",
+      "source_experience_id": "stream-lead-customer-data",
+      "context": "Multi-brand consent + first-party data programme at H&M Group",
+      "metric": "2 brands; expanded marketable base"
+    },
+    {
+      "id": "auto-opt-in-strategy",
+      "claim": "Implemented auto-opt-in strategy with Legal/Data Protection that materially expanded the addressable customer base",
+      "category": "delivery",
+      "source_experience_id": "stream-lead-customer-data",
+      "context": "Regulatory-aligned commercial unlock at H&M Group",
+      "metric": "addressable base expansion"
+    },
+    {
+      "id": "omni-id-identity-resolution",
+      "claim": "Led 'Omni-id' — identity resolution unifying online and offline customer data at ARKET",
+      "category": "technical",
+      "source_experience_id": "delivery-lead-arket",
+      "context": "ARKET.com e-commerce re-platforming",
+      "metric": "single customer profile across online + offline"
+    },
+    {
+      "id": "arket-replatform-delivery",
+      "claim": "End-to-end delivery lead for ARKET's full e-commerce re-platforming",
+      "category": "delivery",
+      "source_experience_id": "delivery-lead-arket",
+      "context": "Complete e-commerce re-platforming with cross-functional dependencies"
+    },
+    {
+      "id": "wholesale-dashboards-e2e",
+      "claim": "Delivered new wholesale dashboards end-to-end across brands — requirements through Power BI",
+      "category": "delivery",
+      "source_experience_id": "data-analyst-wholesale",
+      "context": "Wholesale analytics across H&M Group brands"
+    },
+    {
+      "id": "sap-change-management",
+      "claim": "Led change management for a brand's wholesale team adopting SAP",
+      "category": "stakeholder",
+      "source_experience_id": "data-analyst-wholesale",
+      "context": "Operational system rollout with end-user training and follow-up"
+    },
+    {
+      "id": "itil-rca",
+      "claim": "Led structured ITIL-based root-cause analysis on escalated tickets, shifting reactive handling into preventive improvement",
+      "category": "delivery",
+      "source_experience_id": "cloud-ops-engineer",
+      "context": "Cloud operations / problem management at H&M Group"
+    },
+    {
+      "id": "cofounder-end-to-end",
+      "claim": "Co-founded and ran a sustainability-focused service business end-to-end alongside full-time studies",
+      "category": "leadership",
+      "source_experience_id": "thunberg-rask-cofounder",
+      "context": "Real customer-facing P&L ownership during studies"
+    },
+    {
+      "id": "ai-tooling-daily",
+      "claim": "Heavy daily user of AI tools (Claude, Cursor) to compound output and the processes built",
+      "category": "technical",
+      "context": "Personal practice referenced explicitly in profile summary"
     }
   ],
   "tone_rules": [
@@ -88,27 +273,165 @@
       "id": "specifics-over-superlatives",
       "rule": "Always prefer numbers, names, and concrete artefacts over superlatives",
       "rationale": "'60+ markets' is stronger than 'extensive experience'"
+    },
+    {
+      "id": "anchor-on-named-numbers",
+      "rule": "Anchor headline claims on the named numbers: 4 brands, 60+ markets, 2.5 years consulting",
+      "rationale": "Consistent specifics across applications signal the same person, not a chameleon"
+    },
+    {
+      "id": "bridge-business-tech",
+      "rule": "Position as a bridge between business outcomes and technical/data systems — not a pure-PM and not an engineer",
+      "rationale": "Both CVs lean into this framing because it matches the actual work"
+    },
+    {
+      "id": "ai-tooling-mention",
+      "rule": "Mention daily AI tool usage when the ad signals AI-positivity or modern delivery practices; drop it when the ad is conservative",
+      "rationale": "It is a genuine differentiator but reads as posturing in old-school contexts"
     }
   ],
   "positioning_tensions": [
     {
       "id": "breadth-vs-specialization",
-      "tension": "Breadth vs. specialization",
-      "default_lean": "Lead with breadth and connect-the-dots framing",
-      "when_to_flip": "Job ad emphasizes single domain depth (e.g., 'deep expertise in X') — lead with the closest specialism instead"
+      "tension": "Breadth (horizontal portfolio) vs. specialization (customer data / identity / consent)",
+      "default_lean": "Lead with the specialization (customer data, consent, identity resolution) — breadth is the supporting backdrop",
+      "when_to_flip": "Ad explicitly seeks generalist program/IT-PM coverage across portfolios — flip to the horizontal-delivery framing"
+    },
+    {
+      "id": "operations-vs-project-management",
+      "tension": "Operations & delivery lead vs. IT-projektledare",
+      "default_lean": "English-language ads in MarTech/data/product contexts → operations & delivery framing",
+      "when_to_flip": "Swedish-language or traditional IT-PM ads (timplaner, risk, budget, leverans) → IT-projektledare framing with portfolio delivery as the headline"
     },
     {
       "id": "execution-vs-strategy",
       "tension": "Execution vs. strategy",
-      "default_lean": "Position as execution-led with strategic judgement",
-      "when_to_flip": "Job ad emphasizes strategy/advisory framing — lead with strategic outcomes and decision-shaping work"
+      "default_lean": "Execution-led with strategic judgement (translating constraints into adopted decisions)",
+      "when_to_flip": "Ad explicitly seeks strategy/advisory framing — lead with decision-shaping outcomes (consent architecture, vendor evaluation, roadmap balance)"
     },
     {
       "id": "tech-vs-business",
-      "tension": "Tech vs. business",
-      "default_lean": "Bridge — fluent in tech, owns business outcomes",
-      "when_to_flip": "If role is fully technical (engineering, ML), don't lead with business framing; if fully business (sales, GTM), drop the tech depth signal"
+      "tension": "Tech depth vs. business outcome ownership",
+      "default_lean": "Bridge — fluent in CRM/CDP/ILM systems, owns business outcomes",
+      "when_to_flip": "Pure engineering role → do not lead with this; pure GTM/sales role → drop ILM/CDP detail in favour of customer-impact framing"
+    },
+    {
+      "id": "agency-consultant-vs-product",
+      "tension": "TCS consultant vs. embedded product/operations role",
+      "default_lean": "Frame as embedded operator inside H&M Group (which is the lived reality) — not as detached consultant",
+      "when_to_flip": "Ad explicitly values consultancy/advisory background — lead with the consulting frame and 2.5 years of structured delivery exposure"
+    },
+    {
+      "id": "ai-tooling-foregrounded",
+      "tension": "AI-tooling identity foregrounded vs. quiet",
+      "default_lean": "Mention as productivity multiplier in profile and side-projects section",
+      "when_to_flip": "AI-native / AI product company → foreground heavily, including side projects; conservative enterprise → keep brief and outcome-framed"
     }
+  ],
+  "education": [
+    {
+      "id": "lund-bba",
+      "institution": "Lund University School of Economics and Management",
+      "degree": "B.B.A. in Business & Data Analytics",
+      "period": "2020 — 2023",
+      "focus": "Specialisation in Data Analytics and Statistics"
+    }
+  ],
+  "certifications": [
+    {
+      "id": "azure-fundamentals",
+      "name": "Microsoft Certified: Azure Fundamentals"
+    },
+    {
+      "id": "plytix-pim",
+      "name": "Plytix Certificate in Product Information Management (PIM)"
+    },
+    {
+      "id": "fundamentals-ba",
+      "name": "Fundamentals of Business Analysis (BA)"
+    }
+  ],
+  "skills_taxonomy": [
+    {
+      "category": "Operations & Delivery",
+      "items": [
+        "Process design",
+        "operational playbooks",
+        "change management",
+        "cross-functional coordination",
+        "stakeholder influence",
+        "project management",
+        "portfolio delivery",
+        "timeline planning",
+        "risk management",
+        "budget tracking",
+        "requirements gathering",
+        "workshops"
+      ]
+    },
+    {
+      "category": "Customer Data & Lifecycle",
+      "items": [
+        "CRM",
+        "CDP",
+        "Identity Lifecycle Management (ILM)",
+        "identity resolution",
+        "consent architecture",
+        "first-party data",
+        "customer data migrations",
+        "integrations",
+        "e-commerce platforms"
+      ]
+    },
+    {
+      "category": "Data & Analytics",
+      "items": [
+        "Power BI",
+        "Splunk",
+        "SQL",
+        "ETL pipeline design",
+        "data integration",
+        "dashboard development",
+        "metrics definition"
+      ]
+    },
+    {
+      "category": "Method & Frameworks",
+      "items": [
+        "Agile/Scrum",
+        "Kanban",
+        "traditional project management",
+        "ITIL-based service management",
+        "change management"
+      ]
+    },
+    {
+      "category": "AI & Productivity",
+      "items": [
+        "Claude",
+        "Cursor",
+        "AI-assisted workflows",
+        "automation",
+        "applied ML in Python (Scikit-learn)"
+      ]
+    },
+    {
+      "category": "Tools",
+      "items": [
+        "Jira",
+        "Confluence",
+        "Azure",
+        "Next.js",
+        "Supabase",
+        "Claude API",
+        "SAP",
+        "MS Office"
+      ]
+    }
+  ],
+  "languages": [
+    "Swedish (native)",
+    "English (professional/fluent)"
   ],
   "learned_preferences": []
 }

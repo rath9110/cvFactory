@@ -52,18 +52,44 @@ export const LearnedPreferenceSchema = z.object({
   created_at: z.string(),
 });
 
+export const EducationSchema = z.object({
+  id: z.string(),
+  institution: z.string(),
+  degree: z.string(),
+  period: z.string(),
+  focus: z.string().optional(),
+});
+
+export const CertificationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  issuer: z.string().optional(),
+});
+
+export const SkillGroupSchema = z.object({
+  category: z.string().describe("e.g., 'Operations & Delivery'"),
+  items: z.array(z.string()),
+});
+
 export const MasterProfileSchema = z.object({
   name: z.string(),
   headline: z.string().describe("One-line professional headline"),
+  profile_summary: z.string().describe("3-5 sentence narrative summary used as CV profile section"),
   contact: z.object({
     email: z.string().optional(),
+    phone: z.string().optional(),
     location: z.string().optional(),
     linkedin: z.string().optional(),
+    github: z.string().optional(),
   }),
   experience_blocks: z.array(ExperienceBlockSchema),
   proof_library: z.array(ProofPointSchema),
   tone_rules: z.array(ToneRuleSchema),
   positioning_tensions: z.array(PositioningTensionSchema),
+  education: z.array(EducationSchema).default([]),
+  certifications: z.array(CertificationSchema).default([]),
+  skills_taxonomy: z.array(SkillGroupSchema).default([]),
+  languages: z.array(z.string()).default([]),
   learned_preferences: z.array(LearnedPreferenceSchema).default([]),
 });
 
@@ -72,6 +98,9 @@ export type ProofPoint = z.infer<typeof ProofPointSchema>;
 export type ToneRule = z.infer<typeof ToneRuleSchema>;
 export type PositioningTension = z.infer<typeof PositioningTensionSchema>;
 export type LearnedPreference = z.infer<typeof LearnedPreferenceSchema>;
+export type Education = z.infer<typeof EducationSchema>;
+export type Certification = z.infer<typeof CertificationSchema>;
+export type SkillGroup = z.infer<typeof SkillGroupSchema>;
 export type MasterProfile = z.infer<typeof MasterProfileSchema>;
 
 export const RequirementSchema = z.object({

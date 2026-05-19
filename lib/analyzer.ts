@@ -58,45 +58,49 @@ function mockBrief(jobAd: string): StrategicBrief {
     requirements: [
       {
         id: "r1",
-        text: "[MOCK] Multi-stakeholder delivery experience",
+        text: "[MOCK] Cross-functional delivery across legal, engineering, commercial",
         kind: "must_have",
         match_status: "strong",
-        reasoning: "Mitigram consent rollout and CDP eval both demonstrate this.",
-        proof_point_ids: ["consent-60-markets", "cdp-eval-4brands"],
+        reasoning:
+          "Stream Lead role explicitly bridges Architecture, Legal, Privacy, and Commercial; consent rollout demonstrates this in practice.",
+        proof_point_ids: ["consent-architecture-rollout", "auto-opt-in-strategy"],
       },
       {
         id: "r2",
-        text: "[MOCK] Deep technical specialism in one named tool",
+        text: "[MOCK] Deep single-tool/vendor specialism",
         kind: "must_have",
         match_status: "gap",
-        reasoning: "Profile shows breadth across tools rather than depth in one. Address transparently.",
+        reasoning:
+          "Profile shows breadth across CRM/CDP/ILM systems rather than depth in one named vendor. Address transparently.",
         proof_point_ids: [],
       },
       {
         id: "r3",
-        text: "[MOCK] Cross-market or cross-brand rollout experience",
+        text: "[MOCK] Multi-market or multi-brand rollout experience",
         kind: "nice_to_have",
         match_status: "strong",
-        reasoning: "60+ market consent rollout is a direct, specific match.",
+        reasoning:
+          "4 brands across 60+ markets is a direct, specific match — strongest single anchor in the profile.",
         proof_point_ids: ["consent-60-markets"],
       },
     ],
     lead_with: [
-      "Multi-market delivery framing — anchor on the 60+ market number",
-      "Cross-brand vendor evaluation as a strategic-judgement signal",
+      "Multi-market delivery framing — anchor on the 4 brands / 60+ markets number",
+      "Identity resolution (Omni-id) as a concrete data-architecture credential",
+      "Consent architecture rollout as evidence of commercial-vs-regulatory trade-off skill",
     ],
     reframe: [
       {
         from: "Generic 'program management' framing",
-        to: "Specific cross-market regulatory delivery",
+        to: "Horizontal customer-data portfolio delivery at multi-brand scale",
         reason: "Concrete framing is more credible than role-title-level abstraction.",
       },
     ],
     do_not_fake: [
-      "Deep single-tool specialism — address as adjacent experience plus willingness to ramp",
+      "Deep single-vendor specialism — frame as adjacent experience plus track record of ramping",
     ],
     positioning_memo:
-      "[MOCK] Lead with the 60+ market consent rollout as the headline proof of multi-stakeholder delivery at scale. Bridge into the CDP vendor evaluation as evidence of structured strategic judgement across complex multi-brand contexts. Address the single-tool depth gap transparently — frame as adjacent experience with a track record of ramping. Close with a forward statement tied to a specific company signal from the ad.",
+      "[MOCK] Lead with the 4-brand / 60+ market customer-data stream as the headline proof of multi-stakeholder delivery at scale. Bridge into the Omni-id identity resolution work as evidence of concrete data-architecture judgement. Address single-tool depth gap transparently — adjacent CRM/CDP/ILM experience plus willingness to ramp. Close with a forward statement tied to a specific company signal from the ad.",
   };
 }
 
