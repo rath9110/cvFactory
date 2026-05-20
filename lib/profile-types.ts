@@ -208,3 +208,60 @@ export type Annotation = z.infer<typeof AnnotationSchema>;
 export type AnnotationIssue = (typeof ANNOTATION_ISSUES)[number];
 export type CritiqueScores = z.infer<typeof CritiqueScoresSchema>;
 export type Critique = z.infer<typeof CritiqueSchema>;
+
+export const ANNOTATION_RESPONSES = ["accept", "reject", "ignore"] as const;
+
+export const AnnotationResponseSchema = z.object({
+  annotation_target_text: z
+    .string()
+    .describe("Matches Annotation.target_text — used as the key"),
+  annotation_section: z.enum(["opening", "bridge", "gap_acknowledgement", "closing"]),
+  response: z.enum(ANNOTATION_RESPONSES),
+  comment: z.string().optional(),
+});
+
+export const SectionCommentsSchema = z.object({
+  opening: z.string().default(""),
+  bridge: z.array(z.string()).default([]),
+  gap_acknowledgement: z.string().default(""),
+  closing: z.string().default(""),
+});
+
+export const OVERALL_VERDICTS = ["worked", "felt_off"] as const;
+
+export const FeedbackBlockSchema = z.object({
+  overall_verdict: z.enum(OVERALL_VERDICTS).nullable().default(null),
+  overall_comment: z.string().default(""),
+  annotation_responses: z.array(AnnotationResponseSchema).default([]),
+  section_comments: SectionCommentsSchema.default({
+    opening: "",
+    bridge: [],
+    gap_acknowledgement: "",
+    closing: "",
+  }),
+  pattern_flags: z
+    .array(z.string())
+    .default([])
+    .describe(
+      "Free-text rules the user wants applied across future applications — e.g., 'never claim deep ML expertise'. These become proposed learned_preferences in Phase 4."
+    ),
+});
+
+export const ApplicationSessionSchema = z.object({
+  id: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  job_ad: z.string(),
+  brief: StrategicBriefSchema,
+  letter_generated: CoverLetterSchema,
+  letter_edited: CoverLetterSchema,
+  critique: CritiqueSchema,
+  feedback: FeedbackBlockSchema,
+});
+
+export type AnnotationResponseValue = (typeof ANNOTATION_RESPONSES)[number];
+export type AnnotationResponse = z.infer<typeof AnnotationResponseSchema>;
+export type SectionComments = z.infer<typeof SectionCommentsSchema>;
+export type OverallVerdict = (typeof OVERALL_VERDICTS)[number];
+export type FeedbackBlock = z.infer<typeof FeedbackBlockSchema>;
+export type ApplicationSession = z.infer<typeof ApplicationSessionSchema>;
