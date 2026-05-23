@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { StrategicBrief, Requirement } from "@/lib/profile-types";
 import CoverLetterView from "./cover-letter-view";
+import CVView from "./cv-view";
 
 type ApiResponse = {
   brief: StrategicBrief;
@@ -165,6 +166,8 @@ export default function AnalyzerClient() {
           <BriefCard title="Positioning memo">
             <p className="text-sm leading-relaxed">{result.brief.positioning_memo}</p>
           </BriefCard>
+
+          <CVView brief={result.brief} />
 
           <CoverLetterView jobAd={jobAd} brief={result.brief} />
         </section>

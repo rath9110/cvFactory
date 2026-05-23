@@ -247,6 +247,58 @@ export const FeedbackBlockSchema = z.object({
     ),
 });
 
+export const CVExperienceVariantSchema = z.object({
+  block_id: z
+    .string()
+    .describe("References master_profile.experience_blocks[].id — must exist"),
+  bullets: z
+    .array(z.string())
+    .describe(
+      "Tailored bullet list for this block. Bullets MAY be reordered or subtly reworded relative to the master profile, but MUST NOT contain claims not present in the source block."
+    ),
+});
+
+export const CVSkillGroupVariantSchema = z.object({
+  category: z.string(),
+  items: z.array(z.string()),
+});
+
+export const CVVariantSchema = z.object({
+  profile_summary: z
+    .string()
+    .describe(
+      "3-5 sentence profile section tailored to the strategic brief. Same factual content as master profile_summary, reordered or reframed."
+    ),
+  experience_order: z
+    .array(z.string())
+    .describe(
+      "Ordered list of experience block ids — controls section order. Must reference real block ids."
+    ),
+  experience: z.array(CVExperienceVariantSchema),
+  skills: z.array(CVSkillGroupVariantSchema),
+  emphasis_notes: z
+    .string()
+    .describe("1-2 sentence note on what was emphasized vs. de-emphasized and why."),
+});
+
+export const CVAnnotationSchema = z.object({
+  target_section: z.enum(["profile_summary", "experience", "skills"]),
+  target_block_id: z
+    .string()
+    .optional()
+    .describe("If target_section is 'experience', the block id this annotation refers to"),
+  target_text: z.string().describe("Exact verbatim substring being annotated"),
+  issue: z.enum(ANNOTATION_ISSUES),
+  note: z.string(),
+  suggested_rewrite: z.string().optional(),
+});
+
+export const CVCritiqueSchema = z.object({
+  scores: CritiqueScoresSchema,
+  annotations: z.array(CVAnnotationSchema),
+  verdict: z.string(),
+});
+
 export const ApplicationSessionSchema = z.object({
   id: z.string(),
   created_at: z.string(),
@@ -257,6 +309,8 @@ export const ApplicationSessionSchema = z.object({
   letter_edited: CoverLetterSchema,
   critique: CritiqueSchema,
   feedback: FeedbackBlockSchema,
+  cv_variant: CVVariantSchema.optional(),
+  cv_critique: CVCritiqueSchema.optional(),
 });
 
 export type AnnotationResponseValue = (typeof ANNOTATION_RESPONSES)[number];
@@ -264,4 +318,9 @@ export type AnnotationResponse = z.infer<typeof AnnotationResponseSchema>;
 export type SectionComments = z.infer<typeof SectionCommentsSchema>;
 export type OverallVerdict = (typeof OVERALL_VERDICTS)[number];
 export type FeedbackBlock = z.infer<typeof FeedbackBlockSchema>;
+export type CVExperienceVariant = z.infer<typeof CVExperienceVariantSchema>;
+export type CVSkillGroupVariant = z.infer<typeof CVSkillGroupVariantSchema>;
+export type CVVariant = z.infer<typeof CVVariantSchema>;
+export type CVAnnotation = z.infer<typeof CVAnnotationSchema>;
+export type CVCritique = z.infer<typeof CVCritiqueSchema>;
 export type ApplicationSession = z.infer<typeof ApplicationSessionSchema>;

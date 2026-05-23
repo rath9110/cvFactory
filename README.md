@@ -6,8 +6,8 @@ A strategic CV and cover letter generator with feedback loops. Built around a st
 
 1. Master profile + job ad analyzer → strategic brief
 2. Cover letter generation with self-critique
-2.5. **Feedback capture (you talk back to the system)** ← _you are here_
-3. CV variant generation + PDF export
+2.5. Feedback capture (you talk back to the system)
+3. **CV variant generation + LaTeX export** ← _you are here_
 4. Learning layer (pattern detection across saved applications → master profile updates)
 
 ## What it does (Phases 1–2)
@@ -36,6 +36,18 @@ You can talk back to the critique and your edits get stored as a session:
 
 Click **Save application** to persist the session to `data/applications/<id>.json`. The directory is git-ignored by default (sessions contain real job ads and your edits). Subsequent saves to the same session overwrite the file.
 
+## Phase 3 — CV variant + LaTeX export
+
+Click **Generate CV variant** (above the cover letter) and the system produces a tailored CV:
+
+- Bullets are reordered or subtly reworded — never invented. The generator validates that every `block_id` exists in the master profile.
+- The strategic brief drives `experience_order` (which roles lead) and which skill categories appear first.
+- A self-critique pass runs after generation (same axes as the cover letter critique: relevance, specificity, honesty, tone-fit) with annotations targeting `profile_summary` / `experience` / `skills`.
+
+The preview matches the visual style of your Mitigram LaTeX template. **Download .tex** produces a complete document — compile via your existing Overleaf or local pdflatex/tectonic toolchain.
+
+PDF generation deliberately stays out-of-process: the LaTeX is the artifact you already know how to ship.
+
 ## Run it
 
 ```bash
@@ -58,6 +70,9 @@ app/
   api/analyze/route.ts     POST: job ad → strategic brief
   api/cover/route.ts       POST: { jobAd, brief } → { letter, critique }
   api/applications/route.ts POST: persist full ApplicationSession (creates or upserts)
+  api/cv/route.ts          POST: { brief } → { variant, critique, profile_snapshot }
+  api/cv/latex/route.ts    POST: { variant } → text/x-tex attachment
+  cv-view.tsx              CV preview + critique + .tex download UI
   globals.css              tailwind entry
   layout.tsx               root layout
 data/
@@ -71,6 +86,9 @@ lib/
   cover-generator.ts       prompt + generator entrypoint (with mock)
   critique.ts              prompt + critique entrypoint (with mock)
   applications.ts          fs-based session persistence
+  cv-generator.ts          CV variant generation + block-id validation (with mock)
+  cv-critique.ts           CV self-critique pass (with mock)
+  latex-template.ts        pure variant → LaTeX renderer (mirrors Mitigram template)
 ```
 
 ## Editing your master profile
@@ -79,5 +97,10 @@ lib/
 
 ## Next phases
 
-- **Phase 3** — CV variant generation reweighting `experience_blocks` + `proof_library` against the strategic brief, with PDF/docx export matching the LaTeX layout.
 - **Phase 4** — read accumulated `data/applications/*.json` to detect cross-application patterns: framings you always cut, pattern flags you keep adding, low-scoring critique categories. Surface as proposed updates to `master_profile.json` (new tone rules, new positioning tensions, new `learned_preferences`).
+
+## Known gaps (deferred)
+
+- CV variant editing and per-annotation accept/reject (parity with cover letter feedback layer) — extends naturally from the existing `FeedbackBlock` once needed.
+- Saving the CV variant into `ApplicationSession` (the schema already has optional `cv_variant` + `cv_critique` slots — UI just needs to include them in the POST payload).
+- Bullet-level traceability: today the generator validates only `block_id`s, not individual bullet provenance. Could be tightened to require each variant bullet either matches a master bullet substring or is flagged as a paraphrase.
