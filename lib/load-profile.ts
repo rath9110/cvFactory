@@ -8,3 +8,8 @@ export async function loadProfile(): Promise<MasterProfile> {
   const raw = await fs.readFile(PROFILE_PATH, "utf8");
   return MasterProfileSchema.parse(JSON.parse(raw));
 }
+
+export async function saveProfile(profile: MasterProfile): Promise<void> {
+  const validated = MasterProfileSchema.parse(profile);
+  await fs.writeFile(PROFILE_PATH, JSON.stringify(validated, null, 2) + "\n", "utf8");
+}

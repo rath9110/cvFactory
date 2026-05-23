@@ -7,8 +7,8 @@ A strategic CV and cover letter generator with feedback loops. Built around a st
 1. Master profile + job ad analyzer → strategic brief
 2. Cover letter generation with self-critique
 2.5. Feedback capture (you talk back to the system)
-3. **CV variant generation + LaTeX export** ← _you are here_
-4. Learning layer (pattern detection across saved applications → master profile updates)
+3. CV variant generation + LaTeX export
+4. **Learning layer (pattern detection across saved applications → master profile updates)** ← _you are here_
 
 ## What it does (Phases 1–2)
 
@@ -48,6 +48,18 @@ The preview matches the visual style of your Mitigram LaTeX template. **Download
 
 PDF generation deliberately stays out-of-process: the LaTeX is the artifact you already know how to ship.
 
+## Phase 4 — learning layer
+
+Navigate to `/learn` (header link from the homepage) to see the system read across all your saved applications:
+
+- **Aggregate stats**: session count, verdict split, avg critique scores, avg edit fraction per section, annotation accept/reject/ignore counts by issue type.
+- **Pattern flags** you added across sessions — counted and deduplicated.
+- **Proposed learnings** from two sources:
+  - `aggregator` (deterministic): repeated pattern flags, high reject-rate annotation types, heavily edited sections.
+  - `llm` (nuanced): voice preferences and cross-section patterns the aggregator can't see. Mocked when `ANTHROPIC_API_KEY` is unset.
+
+Each proposal has Accept / Reject buttons. **Accept** appends a `LearnedPreference` entry (confidence: `confirmed`) to `data/master_profile.json` with the supporting session ids — visible across all future generations because every prompt includes the master profile. **Reject** dismisses locally; the proposal will reappear if the underlying pattern persists.
+
 ## Run it
 
 ```bash
@@ -73,6 +85,10 @@ app/
   api/cv/route.ts          POST: { brief } → { variant, critique, profile_snapshot }
   api/cv/latex/route.ts    POST: { variant } → text/x-tex attachment
   cv-view.tsx              CV preview + critique + .tex download UI
+  api/learn/route.ts       GET: aggregate stats + proposed learnings
+  api/learn/apply/route.ts POST: { proposal } → appends LearnedPreference to master_profile.json
+  learn/page.tsx           Learning page server entry
+  learn/learn-client.tsx   Stats panel + proposals list with Accept/Reject
   globals.css              tailwind entry
   layout.tsx               root layout
 data/
@@ -89,15 +105,14 @@ lib/
   cv-generator.ts          CV variant generation + block-id validation (with mock)
   cv-critique.ts           CV self-critique pass (with mock)
   latex-template.ts        pure variant → LaTeX renderer (mirrors Mitigram template)
+  diff.ts                  token-level Jaccard + change extraction
+  learn-aggregator.ts      deterministic stats + threshold-based proposals
+  pattern-detector.ts      LLM pattern detection over session digests (with mock)
 ```
 
 ## Editing your master profile
 
 `data/master_profile.json` has `TODO` placeholders. Replace them with the real content from your Mitigram-era CV. Schemas in `lib/profile-types.ts` are enforced by zod on load — if the file is malformed the API will return 500 with a useful message.
-
-## Next phases
-
-- **Phase 4** — read accumulated `data/applications/*.json` to detect cross-application patterns: framings you always cut, pattern flags you keep adding, low-scoring critique categories. Surface as proposed updates to `master_profile.json` (new tone rules, new positioning tensions, new `learned_preferences`).
 
 ## Known gaps (deferred)
 

@@ -324,3 +324,22 @@ export type CVVariant = z.infer<typeof CVVariantSchema>;
 export type CVAnnotation = z.infer<typeof CVAnnotationSchema>;
 export type CVCritique = z.infer<typeof CVCritiqueSchema>;
 export type ApplicationSession = z.infer<typeof ApplicationSessionSchema>;
+
+export const LEARNING_PROPOSAL_SOURCES = ["aggregator", "llm"] as const;
+
+export const LearningProposalSchema = z.object({
+  id: z.string().describe("Stable id derived from (source, observation) so the same proposal across runs has the same id"),
+  observation: z
+    .string()
+    .describe("The rule as the user would write it for their own master profile"),
+  rationale: z
+    .string()
+    .describe("Why this was proposed — what evidence triggered it"),
+  evidence_session_ids: z
+    .array(z.string())
+    .describe("Application sessions that support this proposal"),
+  source: z.enum(LEARNING_PROPOSAL_SOURCES),
+});
+
+export type LearningProposal = z.infer<typeof LearningProposalSchema>;
+export type LearningProposalSource = (typeof LEARNING_PROPOSAL_SOURCES)[number];
