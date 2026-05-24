@@ -6,9 +6,40 @@ import {
   FeedbackBlockSchema,
   StrategicBriefSchema,
 } from "@/lib/profile-types";
-import { newApplicationId, saveSession } from "@/lib/applications";
+import {
+  listSessions,
+  loadSession,
+  newApplicationId,
+  saveSession,
+} from "@/lib/applications";
 
 export const runtime = "nodejs";
+
+export async function GET() {
+  const summaries = await listSessions();
+  const detailed = await Promise.all(
+    summaries.map(async (s) => {
+      try {
+        const session = await loadSession(s.id);
+        const jobSnippet = session.job_ad.slice(0, 120);
+        return {
+          id: session.id,
+          created_at: session.created_at,
+          updated_at: session.updated_at,
+          job_snippet: jobSnippet,
+          verdict: session.feedback.overall_verdict,
+          scores: session.critique.scores,
+          has_cv: Boolean(session.cv_variant),
+        };
+      } catch {
+        return null;
+      }
+    })
+  );
+  return NextResponse.json({
+    sessions: detailed.filter((d): d is NonNullable<typeof d> => d !== null),
+  });
+}
 
 const BodySchema = z.object({
   id: z.string().optional(),

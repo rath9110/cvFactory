@@ -12,12 +12,17 @@ export default function HomePage() {
             and an honest cover letter.
           </p>
         </div>
-        <Link
-          href="/learn"
-          className="text-sm font-medium text-stone-600 underline-offset-4 hover:underline"
-        >
-          Learning →
-        </Link>
+        <nav className="flex gap-4 text-sm font-medium text-stone-600">
+          <Link
+            href="/applications"
+            className="underline-offset-4 hover:underline"
+          >
+            Applications
+          </Link>
+          <Link href="/learn" className="underline-offset-4 hover:underline">
+            Learning →
+          </Link>
+        </nav>
       </header>
       <AnalyzerClient />
     </main>

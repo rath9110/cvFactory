@@ -81,7 +81,9 @@ app/
   cover-letter-view.tsx    cover letter draft + annotated critique UI
   api/analyze/route.ts     POST: job ad → strategic brief
   api/cover/route.ts       POST: { jobAd, brief } → { letter, critique }
-  api/applications/route.ts POST: persist full ApplicationSession (creates or upserts)
+  api/applications/route.ts GET/POST: list sessions / persist full ApplicationSession (creates or upserts)
+  api/applications/[id]/route.ts GET/DELETE: load one / remove one
+  applications/                browse + detail UI for saved sessions
   api/cv/route.ts          POST: { brief } → { variant, critique, profile_snapshot }
   api/cv/latex/route.ts    POST: { variant } → text/x-tex attachment
   cv-view.tsx              CV preview + critique + .tex download UI
@@ -113,6 +115,16 @@ lib/
 ## Editing your master profile
 
 `data/master_profile.json` has `TODO` placeholders. Replace them with the real content from your Mitigram-era CV. Schemas in `lib/profile-types.ts` are enforced by zod on load — if the file is malformed the API will return 500 with a useful message.
+
+## Phase 5 — application history
+
+Navigate to `/applications` (header link on the homepage and `/learn`) to browse every saved session:
+
+- List view: timestamp, job-ad snippet, your verdict, all four critique scores, whether a CV variant was attached.
+- Detail view at `/applications/<id>`: full job ad, strategic brief, critique with annotations, the edited cover letter you actually saved, your captured feedback (overall verdict + comment, pattern flags, annotation responses, section notes), and CV variant emphasis notes if attached.
+- **Copy letter** copies the final letter to clipboard. **Delete** removes the session file from disk (with a confirm).
+
+The list and detail views are read-only — re-editing a session in place is a candidate for a later pass.
 
 ## Known gaps (deferred)
 

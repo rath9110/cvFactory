@@ -38,6 +38,16 @@ export async function loadSession(id: string): Promise<ApplicationSession> {
   return ApplicationSessionSchema.parse(JSON.parse(raw));
 }
 
+export async function deleteSession(id: string): Promise<boolean> {
+  try {
+    await fs.unlink(fileFor(id));
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
+}
+
 export async function listSessions(): Promise<
   Array<{ id: string; updated_at: string }>
 > {
