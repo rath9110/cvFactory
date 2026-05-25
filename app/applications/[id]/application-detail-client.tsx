@@ -1,15 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   AnnotationIssue,
   ApplicationSession,
+  CoverLetter,
   CritiqueScores,
+  Critique,
+  CVCritique,
+  CVVariant,
   OverallVerdict,
+  StrategicBrief,
 } from "@/lib/profile-types";
+import {
+  letterSectionDeltas,
+  scoreDeltas,
+  stringListDelta,
+} from "@/lib/letter-compare";
 
 type DetailResponse = { session: ApplicationSession };
+
+type RegenerateResponse = {
+  brief: StrategicBrief;
+  letter: CoverLetter;
+  critique: Critique;
+  cv_variant: CVVariant;
+  cv_critique: CVCritique;
+  profile_signature: string;
+  learned_preferences_count: number;
+  mocked: boolean;
+};
 
 const ISSUE_LABEL: Record<AnnotationIssue, string> = {
   unsupported_claim: "Unsupported claim",
@@ -103,6 +124,9 @@ export default function ApplicationDetail({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<ApplicationSession | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateError, setRegenerateError] = useState<string | null>(null);
+  const [regenerated, setRegenerated] = useState<RegenerateResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +175,27 @@ export default function ApplicationDetail({ id }: { id: string }) {
       await navigator.clipboard.writeText(fullLetterText(session));
     } catch {
       // ignore
+    }
+  }
+
+  async function onRegenerate() {
+    setRegenerating(true);
+    setRegenerateError(null);
+    setRegenerated(null);
+    try {
+      const res = await fetch(`/api/applications/${id}/regenerate`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRegenerateError(data.error ?? `HTTP ${res.status}`);
+      } else {
+        setRegenerated(data as RegenerateResponse);
+      }
+    } catch (e) {
+      setRegenerateError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setRegenerating(false);
     }
   }
 
@@ -381,6 +426,236 @@ export default function ApplicationDetail({ id }: { id: string }) {
           </Card>
         </>
       )}
+
+      <RegenerateSection
+        session={session}
+        regenerating={regenerating}
+        error={regenerateError}
+        result={regenerated}
+        onRegenerate={onRegenerate}
+      />
     </div>
+  );
+}
+
+function deltaFmt(d: number): string {
+  if (d === 0) return "±0";
+  return d > 0 ? `+${d}` : `${d}`;
+}
+
+function deltaColor(d: number): string {
+  if (d === 0) return "text-stone-500";
+  return d > 0 ? "text-emerald-700" : "text-rose-700";
+}
+
+function fractionColor(f: number): string {
+  if (f >= 0.5) return "bg-rose-100 text-rose-900";
+  if (f >= 0.2) return "bg-amber-100 text-amber-900";
+  return "bg-emerald-100 text-emerald-900";
+}
+
+function RegenerateSection({
+  session,
+  regenerating,
+  error,
+  result,
+  onRegenerate,
+}: {
+  session: ApplicationSession;
+  regenerating: boolean;
+  error: string | null;
+  result: RegenerateResponse | null;
+  onRegenerate: () => void;
+}) {
+  const sectionDeltas = useMemo(
+    () => (result ? letterSectionDeltas(session.letter_edited, result.letter) : null),
+    [result, session.letter_edited]
+  );
+  const sDeltas = useMemo(
+    () => (result ? scoreDeltas(session.critique.scores, result.critique.scores) : null),
+    [result, session.critique.scores]
+  );
+  const leadWithDelta = useMemo(
+    () =>
+      result ? stringListDelta(session.brief.lead_with, result.brief.lead_with) : null,
+    [result, session.brief.lead_with]
+  );
+
+  return (
+    <Card title="Regenerate against current master profile">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-xl text-sm text-stone-600">
+          Re-runs the analyzer + cover + CV pipeline against{" "}
+          <code>master_profile.json</code> as it stands now — including any{" "}
+          <code>learned_preferences</code> you accepted on the Learning page. The
+          saved session above is not modified.
+        </p>
+        <button
+          type="button"
+          onClick={onRegenerate}
+          disabled={regenerating}
+          className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+        >
+          {regenerating
+            ? "Regenerating…"
+            : result
+              ? "Regenerate again"
+              : "Regenerate"}
+        </button>
+      </div>
+      {error && <p className="mt-3 text-sm text-rose-700">{error}</p>}
+
+      {result && sectionDeltas && sDeltas && leadWithDelta && (
+        <div className="mt-5 space-y-5">
+          {result.mocked && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <strong>Mock output.</strong> Mock generators are deterministic for a
+              given profile, so the regenerated draft only differs from the saved
+              one if the master profile has changed. Set{" "}
+              <code>ANTHROPIC_API_KEY</code> for live regeneration.
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3 text-xs text-stone-600">
+            <span>
+              Master profile signature:{" "}
+              <code className="text-stone-800">{result.profile_signature}</code>
+            </span>
+            <span>
+              Learned preferences in profile:{" "}
+              <code>{result.learned_preferences_count}</code>
+            </span>
+          </div>
+
+          <div>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Score deltas (regenerated − saved)
+            </h3>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              {(
+                [
+                  ["Relevance", sDeltas.relevance],
+                  ["Specificity", sDeltas.specificity],
+                  ["Honesty", sDeltas.honesty],
+                  ["Tone fit", sDeltas.tone_fit],
+                ] as [string, number][]
+              ).map(([label, d]) => (
+                <div
+                  key={label}
+                  className="rounded border border-stone-200 bg-stone-50 px-3 py-2 text-sm"
+                >
+                  <div className="text-xs text-stone-500">{label}</div>
+                  <div className={`text-base font-semibold ${deltaColor(d)}`}>
+                    {deltaFmt(d)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Cover letter — edit fraction per section
+            </h3>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              {(
+                [
+                  ["Opening", sectionDeltas.opening],
+                  ["Bridge (avg)", sectionDeltas.bridge_avg],
+                  ["Gap ack.", sectionDeltas.gap_acknowledgement],
+                  ["Closing", sectionDeltas.closing],
+                ] as [string, number][]
+              ).map(([label, f]) => (
+                <div
+                  key={label}
+                  className={`rounded px-3 py-2 text-sm ${fractionColor(f)}`}
+                >
+                  <div className="text-xs opacity-80">{label}</div>
+                  <div className="text-base font-semibold tabular-nums">
+                    {Math.round(f * 100)}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Brief — lead with
+            </h3>
+            <ul className="space-y-1 text-sm">
+              {leadWithDelta.map((item, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span
+                    className={
+                      item.status === "added"
+                        ? "rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800"
+                        : item.status === "removed"
+                          ? "rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-800"
+                          : "rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-stone-600"
+                    }
+                  >
+                    {item.status === "added"
+                      ? "+"
+                      : item.status === "removed"
+                        ? "−"
+                        : "="}
+                  </span>
+                  <span
+                    className={
+                      item.status === "removed" ? "text-stone-500 line-through" : ""
+                    }
+                  >
+                    {item.text}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                Saved letter (final edited version)
+              </h3>
+              <div className="space-y-2 whitespace-pre-wrap leading-relaxed">
+                <p>{session.letter_edited.opening}</p>
+                {session.letter_edited.bridge.map((p, i) => (
+                  <p key={i}>{p.text}</p>
+                ))}
+                {session.letter_edited.gap_acknowledgement && (
+                  <p className="text-stone-700">
+                    {session.letter_edited.gap_acknowledgement}
+                  </p>
+                )}
+                <p>{session.letter_edited.closing}</p>
+              </div>
+            </div>
+            <div className="rounded-lg border border-stone-200 bg-white p-4 text-sm">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                Regenerated draft (current master profile)
+              </h3>
+              <div className="space-y-2 whitespace-pre-wrap leading-relaxed">
+                <p>{result.letter.opening}</p>
+                {result.letter.bridge.map((p, i) => (
+                  <p key={i}>{p.text}</p>
+                ))}
+                {result.letter.gap_acknowledgement && (
+                  <p className="text-stone-700">
+                    {result.letter.gap_acknowledgement}
+                  </p>
+                )}
+                <p>{result.letter.closing}</p>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-stone-500">
+            Regenerated output is not saved. To capture it as a new application,
+            paste the job ad into the analyzer and save from there.
+          </p>
+        </div>
+      )}
+    </Card>
   );
 }

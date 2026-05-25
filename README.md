@@ -83,7 +83,8 @@ app/
   api/cover/route.ts       POST: { jobAd, brief } → { letter, critique }
   api/applications/route.ts GET/POST: list sessions / persist full ApplicationSession (creates or upserts)
   api/applications/[id]/route.ts GET/DELETE: load one / remove one
-  applications/                browse + detail UI for saved sessions
+  api/applications/[id]/regenerate/route.ts POST: re-run full pipeline against current master profile (no mutation)
+  applications/                browse + detail UI for saved sessions (with regenerate panel)
   api/cv/route.ts          POST: { brief } → { variant, critique, profile_snapshot }
   api/cv/latex/route.ts    POST: { variant } → text/x-tex attachment
   cv-view.tsx              CV preview + critique + .tex download UI
@@ -110,6 +111,7 @@ lib/
   diff.ts                  token-level Jaccard + change extraction
   learn-aggregator.ts      deterministic stats + threshold-based proposals
   pattern-detector.ts      LLM pattern detection over session digests (with mock)
+  letter-compare.ts        section-level edit fractions + score deltas for regeneration view
 ```
 
 ## Editing your master profile
@@ -125,6 +127,19 @@ Navigate to `/applications` (header link on the homepage and `/learn`) to browse
 - **Copy letter** copies the final letter to clipboard. **Delete** removes the session file from disk (with a confirm).
 
 The list and detail views are read-only — re-editing a session in place is a candidate for a later pass.
+
+## Phase 6 — regenerate against current profile
+
+On `/applications/<id>` there's a **Regenerate** button that re-runs the entire pipeline (analyzer → cover + critique → CV + critique) against `master_profile.json` as it stands now. The saved session is never mutated.
+
+What you see:
+- A `profile_signature` hash so you can tell at a glance whether the master profile has changed since the session was saved.
+- Score deltas: how each of the four critique scores moved between saved and regenerated.
+- Edit fractions per cover-letter section: how much each section changed.
+- Lead-with diff: added (`+`), removed (`−`), unchanged (`=`) framings.
+- Side-by-side: the saved final letter vs the freshly regenerated draft.
+
+This is the visible payoff of Phase 4: accept a learning, then regenerate an old session and watch the draft shift.
 
 ## Known gaps (deferred)
 
