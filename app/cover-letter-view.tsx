@@ -7,10 +7,16 @@ import type {
   AnnotationResponseValue,
   CoverLetter,
   Critique,
+  CVCritique,
+  CVVariant,
   FeedbackBlock,
   OverallVerdict,
   StrategicBrief,
 } from "@/lib/profile-types";
+
+export type CVPayloadProvider = () =>
+  | { variant: CVVariant; critique: CVCritique }
+  | null;
 
 type CoverApiResponse = {
   letter: CoverLetter;
@@ -180,9 +186,11 @@ type SaveState =
 export default function CoverLetterView({
   jobAd,
   brief,
+  getCVPayload,
 }: {
   jobAd: string;
   brief: StrategicBrief;
+  getCVPayload?: CVPayloadProvider;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -387,6 +395,8 @@ export default function CoverLetterView({
       pattern_flags: patternFlags,
     };
 
+    const cvPayload = getCVPayload?.() ?? null;
+
     try {
       const res = await fetch("/api/applications", {
         method: "POST",
@@ -399,6 +409,12 @@ export default function CoverLetterView({
           letter_edited: letterEdited,
           critique: result.critique,
           feedback,
+          ...(cvPayload
+            ? {
+                cv_variant: cvPayload.variant,
+                cv_critique: cvPayload.critique,
+              }
+            : {}),
         }),
       });
       const data = await res.json();

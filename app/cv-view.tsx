@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   AnnotationIssue,
   Certification,
@@ -34,6 +34,11 @@ type CvApiResponse = {
   profile_snapshot: ProfileSnapshot;
 };
 
+export type CVPayload = {
+  variant: CVVariant;
+  critique: CVCritique;
+};
+
 const ISSUE_STYLES: Record<AnnotationIssue, string> = {
   unsupported_claim: "border-rose-300 bg-rose-50 text-rose-900",
   generic_platitude: "border-amber-300 bg-amber-50 text-amber-900",
@@ -52,6 +57,54 @@ const ISSUE_LABEL: Record<AnnotationIssue, string> = {
   good: "Strength",
 };
 
+type EditedCV = {
+  profile_summary: string;
+  experience_bullets: Record<string, string>; // blockId → newline-separated bullets
+  skills_items: Record<string, string>; // category → comma-separated items
+  experience_order: string[];
+  emphasis_notes: string;
+};
+
+function hydrate(variant: CVVariant): EditedCV {
+  const experience_bullets: Record<string, string> = {};
+  for (const e of variant.experience) {
+    experience_bullets[e.block_id] = e.bullets.join("\n");
+  }
+  const skills_items: Record<string, string> = {};
+  for (const g of variant.skills) {
+    skills_items[g.category] = g.items.join(", ");
+  }
+  return {
+    profile_summary: variant.profile_summary,
+    experience_bullets,
+    skills_items,
+    experience_order: [...variant.experience_order],
+    emphasis_notes: variant.emphasis_notes,
+  };
+}
+
+function rebuildVariant(edited: EditedCV, original: CVVariant): CVVariant {
+  return {
+    profile_summary: edited.profile_summary,
+    experience_order: edited.experience_order,
+    experience: edited.experience_order.map((blockId) => ({
+      block_id: blockId,
+      bullets: (edited.experience_bullets[blockId] ?? "")
+        .split("\n")
+        .map((b) => b.trim())
+        .filter((b) => b.length > 0),
+    })),
+    skills: original.skills.map((g) => ({
+      category: g.category,
+      items: (edited.skills_items[g.category] ?? "")
+        .split(",")
+        .map((i) => i.trim())
+        .filter((i) => i.length > 0),
+    })),
+    emphasis_notes: edited.emphasis_notes,
+  };
+}
+
 function ScoreBar({ label, score }: { label: string; score: number }) {
   const pct = (score / 10) * 100;
   const color =
@@ -69,7 +122,13 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
   );
 }
 
-function AnnotationCard({ ann }: { ann: CVAnnotation }) {
+function AnnotationCard({
+  ann,
+  onApply,
+}: {
+  ann: CVAnnotation;
+  onApply?: (rewrite: string) => void;
+}) {
   return (
     <div className={`rounded-md border p-3 text-sm ${ISSUE_STYLES[ann.issue]}`}>
       <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -86,11 +145,22 @@ function AnnotationCard({ ann }: { ann: CVAnnotation }) {
       </div>
       <p>{ann.note}</p>
       {ann.suggested_rewrite && (
-        <div className="mt-2 rounded border border-white/60 bg-white/70 p-2 text-sm">
-          <div className="mb-1 text-xs font-medium uppercase tracking-wide opacity-70">
+        <div className="mt-2 space-y-1">
+          <div className="text-xs font-medium uppercase tracking-wide opacity-70">
             Suggested rewrite
           </div>
-          {ann.suggested_rewrite}
+          <div className="rounded border border-white/60 bg-white/70 p-2 text-sm">
+            {ann.suggested_rewrite}
+          </div>
+          {onApply && (
+            <button
+              type="button"
+              onClick={() => onApply(ann.suggested_rewrite!)}
+              className="text-xs font-medium underline underline-offset-2"
+            >
+              Apply rewrite
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -220,16 +290,38 @@ function PreviewPaper({
   );
 }
 
-export default function CVView({ brief }: { brief: StrategicBrief }) {
+export default function CVView({
+  brief,
+  onPayloadChange,
+}: {
+  brief: StrategicBrief;
+  onPayloadChange?: (payload: CVPayload | null) => void;
+}) {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CvApiResponse | null>(null);
+  const [edited, setEdited] = useState<EditedCV | null>(null);
+
+  const currentVariant = useMemo(() => {
+    if (!result || !edited) return null;
+    return rebuildVariant(edited, result.variant);
+  }, [result, edited]);
+
+  useEffect(() => {
+    if (!onPayloadChange) return;
+    if (currentVariant && result) {
+      onPayloadChange({ variant: currentVariant, critique: result.critique });
+    } else {
+      onPayloadChange(null);
+    }
+  }, [currentVariant, result, onPayloadChange]);
 
   async function onGenerate() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setEdited(null);
     try {
       const res = await fetch("/api/cv", {
         method: "POST",
@@ -240,7 +332,9 @@ export default function CVView({ brief }: { brief: StrategicBrief }) {
       if (!res.ok) {
         setError(data.error ?? `Request failed (${res.status})`);
       } else {
-        setResult(data as CvApiResponse);
+        const r = data as CvApiResponse;
+        setResult(r);
+        setEdited(hydrate(r.variant));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
@@ -250,7 +344,7 @@ export default function CVView({ brief }: { brief: StrategicBrief }) {
   }
 
   async function onDownloadTex() {
-    if (!result) return;
+    if (!currentVariant) return;
     setDownloading(true);
     setError(null);
     try {
@@ -258,7 +352,7 @@ export default function CVView({ brief }: { brief: StrategicBrief }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          variant: result.variant,
+          variant: currentVariant,
           filename: "rasmus_thunberg_cv.tex",
         }),
       });
@@ -283,12 +377,67 @@ export default function CVView({ brief }: { brief: StrategicBrief }) {
     }
   }
 
+  function applyAnnotationRewrite(ann: CVAnnotation) {
+    if (!ann.suggested_rewrite || !edited) return;
+    const rewrite = ann.suggested_rewrite;
+    setEdited((prev) => {
+      if (!prev) return prev;
+      if (ann.target_section === "profile_summary") {
+        const current = prev.profile_summary;
+        return {
+          ...prev,
+          profile_summary: current.includes(ann.target_text)
+            ? current.replace(ann.target_text, rewrite)
+            : rewrite,
+        };
+      }
+      if (ann.target_section === "experience" && ann.target_block_id) {
+        const current = prev.experience_bullets[ann.target_block_id] ?? "";
+        const next = current.includes(ann.target_text)
+          ? current.replace(ann.target_text, rewrite)
+          : current + "\n" + rewrite;
+        return {
+          ...prev,
+          experience_bullets: {
+            ...prev.experience_bullets,
+            [ann.target_block_id]: next,
+          },
+        };
+      }
+      if (ann.target_section === "skills") {
+        const found = Object.entries(prev.skills_items).find(([, items]) =>
+          items.includes(ann.target_text)
+        );
+        if (found) {
+          const [cat, items] = found;
+          return {
+            ...prev,
+            skills_items: {
+              ...prev.skills_items,
+              [cat]: items.replace(ann.target_text, rewrite),
+            },
+          };
+        }
+      }
+      return prev;
+    });
+  }
+
+  function moveBlock(idx: number, delta: number) {
+    if (!edited) return;
+    const order = [...edited.experience_order];
+    const target = idx + delta;
+    if (target < 0 || target >= order.length) return;
+    [order[idx], order[target]] = [order[target], order[idx]];
+    setEdited({ ...edited, experience_order: order });
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">CV variant</h2>
         <div className="flex gap-2">
-          {result && (
+          {result && currentVariant && (
             <button
               type="button"
               onClick={onDownloadTex}
@@ -314,7 +463,7 @@ export default function CVView({ brief }: { brief: StrategicBrief }) {
       </div>
       {error && <p className="text-sm text-rose-700">{error}</p>}
 
-      {result && (
+      {result && edited && currentVariant && (
         <div className="space-y-6">
           {result.mocked && (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -341,10 +490,116 @@ export default function CVView({ brief }: { brief: StrategicBrief }) {
             <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">
               Emphasis notes
             </h3>
-            <p className="text-sm leading-relaxed">{result.variant.emphasis_notes}</p>
+            <p className="text-sm leading-relaxed">{currentVariant.emphasis_notes}</p>
           </div>
 
-          <PreviewPaper variant={result.variant} snapshot={result.profile_snapshot} />
+          <div className="space-y-3 rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
+            <label className="text-sm font-semibold text-stone-700">
+              Profile summary
+            </label>
+            <textarea
+              value={edited.profile_summary}
+              onChange={(e) =>
+                setEdited({ ...edited, profile_summary: e.target.value })
+              }
+              rows={4}
+              className="w-full rounded-md border border-stone-300 bg-white p-3 text-sm shadow-sm focus:border-stone-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-stone-500">
+              Experience (drag-free reorder via arrows; bullets — one per line)
+            </h3>
+            {edited.experience_order.map((blockId, idx) => {
+              const block = result.profile_snapshot.experience_blocks.find(
+                (b) => b.id === blockId
+              );
+              if (!block) return null;
+              const value = edited.experience_bullets[blockId] ?? "";
+              return (
+                <div
+                  key={blockId}
+                  className="space-y-2 rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm">
+                      <span className="font-semibold">{block.role}</span>{" "}
+                      <span className="text-stone-500">|</span>{" "}
+                      <span className="italic text-stone-600">{block.company}</span>{" "}
+                      <span className="text-xs text-stone-400">({block.period})</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveBlock(idx, -1)}
+                        disabled={idx === 0}
+                        className="rounded border border-stone-300 px-2 py-0.5 text-xs hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveBlock(idx, 1)}
+                        disabled={idx === edited.experience_order.length - 1}
+                        className="rounded border border-stone-300 px-2 py-0.5 text-xs hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    value={value}
+                    onChange={(e) =>
+                      setEdited({
+                        ...edited,
+                        experience_bullets: {
+                          ...edited.experience_bullets,
+                          [blockId]: e.target.value,
+                        },
+                      })
+                    }
+                    rows={Math.max(
+                      3,
+                      Math.min(10, value.split("\n").length + 1)
+                    )}
+                    className="w-full rounded-md border border-stone-300 bg-white p-3 font-mono text-xs leading-relaxed shadow-sm focus:border-stone-500 focus:outline-none"
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-stone-500">
+              Skills (comma-separated within each category)
+            </h3>
+            <div className="space-y-2">
+              {result.variant.skills.map((g) => (
+                <div key={g.category} className="grid grid-cols-[180px_1fr] gap-3">
+                  <label className="text-sm font-medium text-stone-700">
+                    {g.category}
+                  </label>
+                  <input
+                    type="text"
+                    value={edited.skills_items[g.category] ?? ""}
+                    onChange={(e) =>
+                      setEdited({
+                        ...edited,
+                        skills_items: {
+                          ...edited.skills_items,
+                          [g.category]: e.target.value,
+                        },
+                      })
+                    }
+                    className="rounded-md border border-stone-300 bg-white p-2 text-sm focus:border-stone-500 focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <PreviewPaper variant={currentVariant} snapshot={result.profile_snapshot} />
 
           {result.critique.annotations.length > 0 && (
             <div className="space-y-2">
@@ -352,14 +607,23 @@ export default function CVView({ brief }: { brief: StrategicBrief }) {
                 Annotations
               </h3>
               {result.critique.annotations.map((ann, i) => (
-                <AnnotationCard key={i} ann={ann} />
+                <AnnotationCard
+                  key={i}
+                  ann={ann}
+                  onApply={
+                    ann.suggested_rewrite
+                      ? () => applyAnnotationRewrite(ann)
+                      : undefined
+                  }
+                />
               ))}
             </div>
           )}
 
           <p className="text-xs text-stone-500">
-            CV variant editing + per-annotation feedback ship in a later pass —
-            Phase 3 lands the generation, critique, preview, and .tex export.
+            Edits are local until you click <strong>Save application</strong> in the
+            cover letter section below — the CV variant rides along in the same
+            session record.
           </p>
         </div>
       )}

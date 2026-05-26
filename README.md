@@ -141,8 +141,20 @@ What you see:
 
 This is the visible payoff of Phase 4: accept a learning, then regenerate an old session and watch the draft shift.
 
+## Phase 7 — CV editing + persistence parity
+
+The CV variant is now editable in place and persists with the application:
+
+- **Profile summary** is an editable textarea.
+- **Experience bullets** edit as newline-separated text per block. Reorder blocks with ↑/↓ buttons.
+- **Skills** edit as comma-separated items per category.
+- **Apply rewrite** on CV annotations splices the suggested text into the right section (profile_summary / matching experience block / skills row).
+- **Download .tex** uses the *edited* variant, not the originally generated one.
+- When you click **Save application** in the cover letter section, the CV variant + CV critique ride along into the same `ApplicationSession` record.
+
+On `/applications/<id>`, saved CV variants render as structured content (profile_summary, ordered experience blocks with bullets, skills) plus a per-session **Download .tex** button, so you can re-export an old CV without rerunning generation.
+
 ## Known gaps (deferred)
 
-- CV variant editing and per-annotation accept/reject (parity with cover letter feedback layer) — extends naturally from the existing `FeedbackBlock` once needed.
-- Saving the CV variant into `ApplicationSession` (the schema already has optional `cv_variant` + `cv_critique` slots — UI just needs to include them in the POST payload).
 - Bullet-level traceability: today the generator validates only `block_id`s, not individual bullet provenance. Could be tightened to require each variant bullet either matches a master bullet substring or is flagged as a paraphrase.
+- Resume editing of a saved session: opening `/applications/<id>` is currently read-only. Re-hydrating analyzer + cover + CV state from a saved session is a candidate for a later pass.

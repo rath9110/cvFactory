@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { StrategicBrief, Requirement } from "@/lib/profile-types";
 import CoverLetterView from "./cover-letter-view";
-import CVView from "./cv-view";
+import CVView, { type CVPayload } from "./cv-view";
 
 type ApiResponse = {
   brief: StrategicBrief;
@@ -34,6 +34,12 @@ export default function AnalyzerClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ApiResponse | null>(null);
+
+  const cvPayloadRef = useRef<CVPayload | null>(null);
+  const onCVPayloadChange = useCallback((p: CVPayload | null) => {
+    cvPayloadRef.current = p;
+  }, []);
+  const getCVPayload = useCallback(() => cvPayloadRef.current, []);
 
   async function onAnalyze() {
     setLoading(true);
@@ -167,9 +173,13 @@ export default function AnalyzerClient() {
             <p className="text-sm leading-relaxed">{result.brief.positioning_memo}</p>
           </BriefCard>
 
-          <CVView brief={result.brief} />
+          <CVView brief={result.brief} onPayloadChange={onCVPayloadChange} />
 
-          <CoverLetterView jobAd={jobAd} brief={result.brief} />
+          <CoverLetterView
+            jobAd={jobAd}
+            brief={result.brief}
+            getCVPayload={getCVPayload}
+          />
         </section>
       )}
     </div>

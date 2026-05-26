@@ -412,19 +412,11 @@ export default function ApplicationDetail({ id }: { id: string }) {
       </Card>
 
       {session.cv_variant && session.cv_critique && (
-        <>
-          <Card title="CV variant — emphasis notes">
-            <p className="text-sm leading-relaxed">
-              {session.cv_variant.emphasis_notes}
-            </p>
-          </Card>
-          <Card title="CV variant — critique scores">
-            <ScoreGrid scores={session.cv_critique.scores} />
-            <p className="mt-3 text-sm leading-relaxed text-stone-700">
-              {session.cv_critique.verdict}
-            </p>
-          </Card>
-        </>
+        <SavedCV
+          sessionId={session.id}
+          variant={session.cv_variant}
+          critique={session.cv_critique}
+        />
       )}
 
       <RegenerateSection
@@ -435,6 +427,125 @@ export default function ApplicationDetail({ id }: { id: string }) {
         onRegenerate={onRegenerate}
       />
     </div>
+  );
+}
+
+function SavedCV({
+  sessionId,
+  variant,
+  critique,
+}: {
+  sessionId: string;
+  variant: ApplicationSession["cv_variant"];
+  critique: ApplicationSession["cv_critique"];
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!variant || !critique) return null;
+
+  async function onDownload() {
+    setDownloading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/cv/latex", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          variant,
+          filename: `cv-${sessionId}.tex`,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? `Download failed (${res.status})`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `cv-${sessionId}.tex`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <>
+      <Card title="CV variant — emphasis notes">
+        <div className="flex items-start justify-between gap-3">
+          <p className="flex-1 text-sm leading-relaxed">{variant.emphasis_notes}</p>
+          <button
+            type="button"
+            onClick={onDownload}
+            disabled={downloading}
+            className="shrink-0 rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {downloading ? "Downloading…" : "Download .tex"}
+          </button>
+        </div>
+        {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
+      </Card>
+
+      <Card title="CV variant — structure">
+        <div className="space-y-4 text-sm">
+          <div>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Profile summary
+            </h3>
+            <p className="leading-relaxed">{variant.profile_summary}</p>
+          </div>
+          <div>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Experience (in order)
+            </h3>
+            <div className="space-y-3">
+              {variant.experience_order.map((id) => {
+                const block = variant.experience.find((e) => e.block_id === id);
+                if (!block) return null;
+                return (
+                  <div key={id}>
+                    <div className="font-mono text-xs text-stone-500">{id}</div>
+                    <ul className="mt-1 list-disc space-y-0.5 pl-5 leading-relaxed">
+                      {block.bullets.map((b, i) => (
+                        <li key={i}>{b}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
+              Skills
+            </h3>
+            <ul className="space-y-1">
+              {variant.skills.map((g, i) => (
+                <li key={i}>
+                  <span className="font-semibold">{g.category}: </span>
+                  <span>{g.items.join(", ")}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="CV variant — critique scores">
+        <ScoreGrid scores={critique.scores} />
+        <p className="mt-3 text-sm leading-relaxed text-stone-700">
+          {critique.verdict}
+        </p>
+      </Card>
+    </>
   );
 }
 

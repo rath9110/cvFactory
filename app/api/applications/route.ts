@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   CoverLetterSchema,
   CritiqueSchema,
+  CVCritiqueSchema,
+  CVVariantSchema,
   FeedbackBlockSchema,
   StrategicBriefSchema,
 } from "@/lib/profile-types";
@@ -49,6 +51,8 @@ const BodySchema = z.object({
   letter_edited: CoverLetterSchema,
   critique: CritiqueSchema,
   feedback: FeedbackBlockSchema,
+  cv_variant: CVVariantSchema.optional(),
+  cv_critique: CVCritiqueSchema.optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -84,6 +88,8 @@ export async function POST(req: NextRequest) {
     letter_edited: parsed.data.letter_edited,
     critique: parsed.data.critique,
     feedback: parsed.data.feedback,
+    ...(parsed.data.cv_variant && { cv_variant: parsed.data.cv_variant }),
+    ...(parsed.data.cv_critique && { cv_critique: parsed.data.cv_critique }),
   };
 
   try {
