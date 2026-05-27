@@ -90,6 +90,9 @@ app/
   cv-view.tsx              CV preview + critique + .tex download UI
   api/learn/route.ts       GET: aggregate stats + proposed learnings
   api/learn/apply/route.ts POST: { proposal } → appends LearnedPreference to master_profile.json
+  api/profile/route.ts     GET: current master profile (used by /profile)
+  api/profile/revert-learning/route.ts POST: { learning_id } → removes a LearnedPreference
+  profile/                 inspection hub: counts, learnings with revert, tone rules + positioning tensions
   learn/page.tsx           Learning page server entry
   learn/learn-client.tsx   Stats panel + proposals list with Accept/Reject
   globals.css              tailwind entry
@@ -153,6 +156,16 @@ The CV variant is now editable in place and persists with the application:
 - When you click **Save application** in the cover letter section, the CV variant + CV critique ride along into the same `ApplicationSession` record.
 
 On `/applications/<id>`, saved CV variants render as structured content (profile_summary, ordered experience blocks with bullets, skills) plus a per-session **Download .tex** button, so you can re-export an old CV without rerunning generation.
+
+## Phase 8 — master profile hub
+
+`/profile` is the inspection surface for the master profile:
+
+- **Profile content** card: counts of experience blocks, proof points, tone rules, positioning tensions, education, certifications, skill categories, learned preferences.
+- **Learned preferences** list (newest first): observation, created_at, confidence badge, source session ids, **Revert** button (with confirm). Reverting removes the entry from `master_profile.json` immediately — past saved sessions still reference it, but future generations won't.
+- Read-only reference cards for **active tone rules** and **positioning tensions** so you can sanity-check what every prompt currently runs against.
+
+Reverted learnings will be re-proposed by `/learn` next time if the underlying pattern persists — that's intentional. To kill a proposal permanently you need to either change the pattern (e.g., delete the pattern flags from the sessions that supported it) or hand-edit the profile.
 
 ## Known gaps (deferred)
 

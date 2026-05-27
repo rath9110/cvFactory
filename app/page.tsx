@@ -13,6 +13,9 @@ export default function HomePage() {
           </p>
         </div>
         <nav className="flex gap-4 text-sm font-medium text-stone-600">
+          <Link href="/profile" className="underline-offset-4 hover:underline">
+            Profile
+          </Link>
           <Link
             href="/applications"
             className="underline-offset-4 hover:underline"

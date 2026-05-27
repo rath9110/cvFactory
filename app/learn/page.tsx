@@ -16,6 +16,9 @@ export default function LearnPage() {
           <Link href="/" className="underline-offset-4 hover:underline">
             ← Analyzer
           </Link>
+          <Link href="/profile" className="underline-offset-4 hover:underline">
+            Profile
+          </Link>
           <Link
             href="/applications"
             className="underline-offset-4 hover:underline"
