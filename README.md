@@ -167,6 +167,39 @@ On `/applications/<id>`, saved CV variants render as structured content (profile
 
 Reverted learnings will be re-proposed by `/learn` next time if the underlying pattern persists — that's intentional. To kill a proposal permanently you need to either change the pattern (e.g., delete the pattern flags from the sessions that supported it) or hand-edit the profile.
 
+## Phase 9 — deployable
+
+### Storage
+
+Storage is now pluggable. Two backends, auto-detected:
+
+- **Filesystem** (default): `data/master_profile.json` + `data/applications/<id>.json`. What every previous phase used.
+- **Upstash Redis** (Vercel-compatible): used whenever `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set, unless `STORAGE_DRIVER=fs` overrides. Keys: `cvfactory:profile`, `cvfactory:session:<id>`, plus a hash `cvfactory:session_index` mapping id → updated_at for fast listing.
+
+When using Redis on a fresh deployment, the master profile won't exist yet. Either:
+
+1. Locally with filesystem still active, hit `GET /api/profile` to confirm your local `master_profile.json` is healthy, copy its JSON, then on the deployed instance call `POST /api/profile/revert-learning` with a non-existent id to confirm auth works — or more directly, write a one-off script using `@upstash/redis` to `SET cvfactory:profile <your-json>`.
+2. Or add a small seed script. Not yet built — current path is to seed Redis manually once.
+
+### Auth
+
+Set `APP_AUTH_TOKEN` to any long random string. With it set:
+
+- Middleware redirects unauthenticated browsers to `/login`, returns 401 to unauthenticated API calls.
+- `/login` takes the token, posts to `/api/login`, server sets an HttpOnly Secure SameSite=Strict cookie (`cvf_session`) good for 30 days, redirects back to where you came from.
+
+Without `APP_AUTH_TOKEN`, the app is open — the local-dev default.
+
+### Deploy to Vercel
+
+1. Push to a GitHub repo (this is currently a subdir of another repo — split it first).
+2. New Vercel project pointed at the repo, framework auto-detected as Next.js.
+3. Add a Redis integration from the Vercel marketplace (Upstash is the supported successor to Vercel KV). It will populate `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` automatically.
+4. Set the rest in Project Settings → Environment Variables:
+   - `ANTHROPIC_API_KEY` — your key (otherwise mock output ships to production)
+   - `APP_AUTH_TOKEN` — a long random string
+5. Deploy. Visit `/login`, enter the token, you're in. The first time you generate, you'll get `Master profile not initialised in Redis` until you seed it.
+
 ## Known gaps (deferred)
 
 - Bullet-level traceability: today the generator validates only `block_id`s, not individual bullet provenance. Could be tightened to require each variant bullet either matches a master bullet substring or is flagged as a paraphrase.
