@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { downloadWordDocument, openPdfPrintView } from "@/lib/client-export";
+import { cvSegments } from "@/lib/ai-tells";
+import HumanityPanel from "./humanity-panel";
+import NoteField from "./note-field";
 import type {
   AnnotationIssue,
   Certification,
@@ -38,6 +41,8 @@ type CvApiResponse = {
 export type CVPayload = {
   variant: CVVariant;
   critique: CVCritique;
+  /** Feedback on parts of the CV, keyed profile_summary | block:<id> | skills. */
+  notes: Record<string, string>;
 };
 
 const ISSUE_STYLES: Record<AnnotationIssue, string> = {
@@ -292,10 +297,10 @@ function PreviewPaper({
 }
 
 export default function CVView({
-  brief,
+  getBrief,
   onPayloadChange,
 }: {
-  brief: StrategicBrief;
+  getBrief: () => Promise<StrategicBrief>;
   onPayloadChange?: (payload: CVPayload | null) => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -304,6 +309,19 @@ export default function CVView({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CvApiResponse | null>(null);
   const [edited, setEdited] = useState<EditedCV | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+
+  const setNote = useCallback((key: string, value: string) => {
+    setNotes((prev) => {
+      if (!value.trim()) {
+        if (!(key in prev)) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: value };
+    });
+  }, []);
 
   const currentVariant = useMemo(() => {
     if (!result || !edited) return null;
@@ -313,11 +331,11 @@ export default function CVView({
   useEffect(() => {
     if (!onPayloadChange) return;
     if (currentVariant && result) {
-      onPayloadChange({ variant: currentVariant, critique: result.critique });
+      onPayloadChange({ variant: currentVariant, critique: result.critique, notes });
     } else {
       onPayloadChange(null);
     }
-  }, [currentVariant, result, onPayloadChange]);
+  }, [currentVariant, result, notes, onPayloadChange]);
 
   async function onGenerate() {
     setLoading(true);
@@ -325,6 +343,8 @@ export default function CVView({
     setResult(null);
     setEdited(null);
     try {
+      // Reading the job ad happens here rather than as a step the user takes.
+      const brief = await getBrief();
       const res = await fetch("/api/cv", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -454,7 +474,7 @@ export default function CVView({
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">CV variant</h2>
+        <h2 className="text-lg font-semibold">CV</h2>
         <div className="flex gap-2">
           {result && currentVariant && (
             <>
@@ -490,11 +510,7 @@ export default function CVView({
             disabled={loading}
             className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
           >
-            {loading
-              ? "Generating + critiquing…"
-              : result
-                ? "Regenerate"
-                : "Generate CV variant"}
+            {loading ? "Writing your CV…" : result ? "Regenerate CV" : "Generate CV"}
           </button>
         </div>
       </div>
@@ -502,19 +518,14 @@ export default function CVView({
 
       {result && edited && currentVariant && (
         <div className="space-y-6">
-          {result.mocked && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              <strong>Mock output.</strong> Set <code>ANTHROPIC_API_KEY</code> in
-              <code> .env.local</code> for real generation + critique.
-            </div>
-          )}
-
           <div className="grid gap-4 rounded-lg border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-4">
             <ScoreBar label="Relevance" score={result.critique.scores.relevance} />
             <ScoreBar label="Specificity" score={result.critique.scores.specificity} />
             <ScoreBar label="Honesty" score={result.critique.scores.honesty} />
             <ScoreBar label="Tone fit" score={result.critique.scores.tone_fit} />
           </div>
+
+          <HumanityPanel segments={cvSegments(currentVariant)} kind="cv" />
 
           <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
             <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">
@@ -541,6 +552,10 @@ export default function CVView({
               }
               rows={4}
               className="w-full rounded-md border border-stone-300 bg-white p-3 text-sm shadow-sm focus:border-stone-500 focus:outline-none"
+            />
+            <NoteField
+              value={notes["profile_summary"] ?? ""}
+              onChange={(v) => setNote("profile_summary", v)}
             />
           </div>
 
@@ -602,6 +617,11 @@ export default function CVView({
                     )}
                     className="w-full rounded-md border border-stone-300 bg-white p-3 font-mono text-xs leading-relaxed shadow-sm focus:border-stone-500 focus:outline-none"
                   />
+                  <NoteField
+                    value={notes[`block:${blockId}`] ?? ""}
+                    onChange={(v) => setNote(`block:${blockId}`, v)}
+                    label="Add a note on this role"
+                  />
                 </div>
               );
             })}
@@ -634,6 +654,11 @@ export default function CVView({
                 </div>
               ))}
             </div>
+            <NoteField
+              value={notes["skills"] ?? ""}
+              onChange={(v) => setNote("skills", v)}
+              label="Add a note on the skills"
+            />
           </div>
 
           <PreviewPaper variant={currentVariant} snapshot={result.profile_snapshot} />

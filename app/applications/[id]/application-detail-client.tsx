@@ -386,6 +386,21 @@ export default function ApplicationDetail({ id }: { id: string }) {
             </div>
           )}
 
+          {Object.keys(session.feedback.cv_notes ?? {}).length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+                CV notes
+              </h3>
+              <ul className="mt-1 space-y-1 text-xs">
+                {Object.entries(session.feedback.cv_notes).map(([key, note]) => (
+                  <li key={key}>
+                    <span className="font-medium">{cvNoteLabel(key)}:</span> {note}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {session.feedback.annotation_responses.length > 0 && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">
@@ -844,4 +859,12 @@ function RegenerateSection({
       )}
     </Card>
   );
+}
+
+/** Turns a cv_notes key (profile_summary | block:<id> | skills) into a label. */
+function cvNoteLabel(key: string): string {
+  if (key === "profile_summary") return "Profile summary";
+  if (key === "skills") return "Skills";
+  if (key.startsWith("block:")) return key.slice("block:".length);
+  return key;
 }

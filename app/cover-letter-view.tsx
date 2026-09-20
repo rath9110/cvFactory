@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { downloadWordDocument, openPdfPrintView } from "@/lib/client-export";
+import HumanityPanel from "./humanity-panel";
+import NoteField from "./note-field";
 import type {
   Annotation,
   AnnotationIssue,
@@ -16,7 +18,7 @@ import type {
 } from "@/lib/profile-types";
 
 export type CVPayloadProvider = () =>
-  | { variant: CVVariant; critique: CVCritique }
+  | { variant: CVVariant; critique: CVCritique; notes: Record<string, string> }
   | null;
 
 type CoverApiResponse = {
@@ -186,17 +188,19 @@ type SaveState =
 
 export default function CoverLetterView({
   jobAd,
-  brief,
+  getBrief,
   getCVPayload,
 }: {
   jobAd: string;
-  brief: StrategicBrief;
+  getBrief: () => Promise<StrategicBrief>;
   getCVPayload?: CVPayloadProvider;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CoverApiResponse | null>(null);
   const [edited, setEdited] = useState<EditableLetter | null>(null);
+  // Kept from generation so the saved session records the brief it was written against.
+  const [brief, setBrief] = useState<StrategicBrief | null>(null);
 
   const [annotationResponses, setAnnotationResponses] = useState<
     Record<string, AnnotationResponseState>
@@ -225,10 +229,13 @@ export default function CoverLetterView({
     setApplicationId(null);
     setSaveState({ kind: "idle" });
     try {
+      // Reading the job ad happens here rather than as a step the user takes.
+      const currentBrief = await getBrief();
+      setBrief(currentBrief);
       const res = await fetch("/api/cover", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jobAd, brief }),
+        body: JSON.stringify({ jobAd, brief: currentBrief }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -394,7 +401,7 @@ export default function CoverLetterView({
   }
 
   async function onSave() {
-    if (!result || !edited) return;
+    if (!result || !edited || !brief) return;
     const letterEdited = buildEditedLetter();
     if (!letterEdited) return;
     setSaveState({ kind: "saving" });
@@ -419,9 +426,11 @@ export default function CoverLetterView({
       ),
       section_comments: sectionComments,
       pattern_flags: patternFlags,
+      cv_notes: {},
     };
 
     const cvPayload = getCVPayload?.() ?? null;
+    if (cvPayload) feedback.cv_notes = cvPayload.notes;
 
     try {
       const res = await fetch("/api/applications", {
@@ -472,9 +481,9 @@ export default function CoverLetterView({
           className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
         >
           {loading
-            ? "Generating + critiquing…"
+            ? "Writing your letter…"
             : result
-              ? "Regenerate"
+              ? "Regenerate cover letter"
               : "Generate cover letter"}
         </button>
       </div>
@@ -482,12 +491,15 @@ export default function CoverLetterView({
 
       {result && edited && (
         <div className="space-y-6">
-          {result.mocked && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              <strong>Mock output.</strong> Set <code>ANTHROPIC_API_KEY</code> in
-              <code> .env.local</code> for real generation + critique.
-            </div>
-          )}
+          <HumanityPanel
+            segments={[
+              edited.opening,
+              ...edited.bridge,
+              edited.gap_acknowledgement,
+              edited.closing,
+            ]}
+            kind="letter"
+          />
 
           <div className="grid gap-4 rounded-lg border border-stone-200 bg-white p-4 shadow-sm md:grid-cols-4">
             <ScoreBar label="Relevance" score={result.critique.scores.relevance} />
@@ -822,13 +834,7 @@ function SectionEditor({
         rows={Math.max(3, Math.min(10, Math.ceil(value.length / 90) + 1))}
         className="w-full rounded-md border border-stone-300 bg-white p-3 text-sm shadow-sm focus:border-stone-500 focus:outline-none"
       />
-      <input
-        type="text"
-        value={note}
-        onChange={(e) => onNoteChange(e.target.value)}
-        placeholder="Your notes on this section (optional)"
-        className="w-full rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-xs"
-      />
+      <NoteField value={note} onChange={onNoteChange} />
       {annotations.length > 0 && (
         <div className="space-y-2 pt-1">
           {annotations.map((ann, i) => {

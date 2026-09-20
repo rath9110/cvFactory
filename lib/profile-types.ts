@@ -245,6 +245,12 @@ export const FeedbackBlockSchema = z.object({
     .describe(
       "Free-text rules the user wants applied across future applications — e.g., 'never claim deep ML expertise'. These become proposed learned_preferences in Phase 4."
     ),
+  cv_notes: z
+    .record(z.string(), z.string())
+    .default({})
+    .describe(
+      "Free-text notes on parts of the CV variant, keyed 'profile_summary' | 'block:<id>' | 'skills'. Defaulted so sessions saved before CV notes existed still parse."
+    ),
 });
 
 export const CVExperienceVariantSchema = z.object({

@@ -8,8 +8,8 @@ export default function HomePage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">CV Factory</h1>
           <p className="mt-1 text-sm text-stone-600">
-            Paste a job ad to produce a strategic brief, then generate a tailored CV
-            and an honest cover letter.
+            Paste a job ad, then generate a CV and a cover letter — tailored to the
+            role, built only from what's in your profile.
           </p>
         </div>
         <nav className="flex gap-4 text-sm font-medium text-stone-600">
