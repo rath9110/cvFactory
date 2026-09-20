@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { LearningProposal } from "@/lib/profile-types";
+import FreshnessBar from "./freshness-bar";
 import type {
   AggregateStats,
   SessionSummary,
@@ -14,6 +15,8 @@ type LearnResponse = {
   mocked: boolean;
   accepted_count: number;
   skipped_session_ids?: string[];
+  generated_at?: string | null;
+  stale?: boolean;
 };
 
 type ProposalState =
@@ -119,6 +122,14 @@ export default function LearnClient() {
     return (
       <div className="space-y-4">
         <SkippedBanner ids={skipped} />
+
+      <FreshnessBar
+        generatedAt={data.generated_at ?? null}
+        stale={Boolean(data.stale)}
+        onRefreshed={(next) =>
+          setData((prev) => (prev ? { ...prev, ...next } : prev))
+        }
+      />
         <div className="rounded-lg border border-stone-200 bg-white p-6 text-sm text-stone-600">
         No saved applications yet. Generate a cover letter on the analyzer page and
         click <strong>Save application</strong> — then come back here to see
@@ -285,7 +296,7 @@ export default function LearnClient() {
                         <button
                           type="button"
                           onClick={() => onReject(p)}
-                          className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+                          className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white"
                         >
                           Reject
                         </button>
@@ -346,16 +357,16 @@ export default function LearnClient() {
                     {s.verdict ?? "—"}
                   </td>
                   <td className="py-1 pr-3 text-right tabular-nums">
-                    {s.scores.relevance}
+                    {s.scores ? s.scores.relevance : "—"}
                   </td>
                   <td className="py-1 pr-3 text-right tabular-nums">
-                    {s.scores.specificity}
+                    {s.scores ? s.scores.specificity : "—"}
                   </td>
                   <td className="py-1 pr-3 text-right tabular-nums">
-                    {s.scores.honesty}
+                    {s.scores ? s.scores.honesty : "—"}
                   </td>
                   <td className="py-1 pr-3 text-right tabular-nums">
-                    {s.scores.tone_fit}
+                    {s.scores ? s.scores.tone_fit : "—"}
                   </td>
                   <td className="py-1 pr-3 text-right tabular-nums">
                     {pct(s.section_edit_fractions.opening)}

@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { downloadWordDocument, openPdfPrintView } from "@/lib/client-export";
 import HumanityPanel from "./humanity-panel";
 import NoteField from "./note-field";
+import { triggerLearningRefresh } from "@/lib/learning-trigger";
 import type {
   Annotation,
   AnnotationIssue,
@@ -457,6 +458,8 @@ export default function CoverLetterView({
         setSaveState({ kind: "error", message: data.error ?? `HTTP ${res.status}` });
       } else {
         setApplicationId(data.id);
+        // Saving as a reference is the other "finished" moment.
+        triggerLearningRefresh();
         setSaveState({
           kind: "saved",
           at: new Date(data.updated_at).toLocaleTimeString(),
@@ -478,7 +481,7 @@ export default function CoverLetterView({
           type="button"
           onClick={onGenerate}
           disabled={loading}
-          className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+          className="border border-stone-900 bg-stone-900 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-white hover:text-stone-900 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300 disabled:text-white"
         >
           {loading
             ? "Writing your letter…"
@@ -629,7 +632,7 @@ export default function CoverLetterView({
                 type="button"
                 onClick={addPatternFlag}
                 disabled={patternDraft.trim().length === 0}
-                className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
               >
                 Add
               </button>
@@ -689,7 +692,7 @@ export default function CoverLetterView({
               type="button"
               onClick={onSave}
               disabled={saveState.kind === "saving"}
-              className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+              className="border border-stone-900 bg-stone-900 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-white hover:text-stone-900 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300 disabled:text-white"
             >
               {saveState.kind === "saving"
                 ? "Saving…"
@@ -701,7 +704,7 @@ export default function CoverLetterView({
               type="button"
               onClick={() => onExport("pdf")}
               disabled={exporting !== null}
-              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
             >
               {exporting === "pdf" ? "Opening…" : "Download PDF"}
             </button>
@@ -709,14 +712,14 @@ export default function CoverLetterView({
               type="button"
               onClick={() => onExport("doc")}
               disabled={exporting !== null}
-              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
             >
               {exporting === "doc" ? "Exporting…" : "Download .doc"}
             </button>
             <button
               type="button"
               onClick={copyToClipboard}
-              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+              className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white"
             >
               Copy full letter
             </button>

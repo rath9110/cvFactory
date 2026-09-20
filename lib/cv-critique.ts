@@ -1,4 +1,5 @@
 import { callJSON, hasApiKey } from "./anthropic";
+import { profileContext } from "./profile-context";
 import {
   CVCritique,
   CVCritiqueSchema,
@@ -31,37 +32,15 @@ Score 1-10 honestly. Use the full range.
 
 Output ONLY valid JSON. No prose.`;
 
-function buildCritiquePrompt(
-  profile: MasterProfile,
-  brief: StrategicBrief,
-  variant: CVVariant
-): string {
-  return `# Master profile (source of truth)
+function buildCritiquePrompt(brief: StrategicBrief, variant: CVVariant): string {
+  return `# Strategic brief
 \`\`\`json
-${JSON.stringify(
-  {
-    name: profile.name,
-    headline: profile.headline,
-    profile_summary: profile.profile_summary,
-    experience_blocks: profile.experience_blocks,
-    proof_library: profile.proof_library,
-    tone_rules: profile.tone_rules,
-    positioning_tensions: profile.positioning_tensions,
-    skills_taxonomy: profile.skills_taxonomy,
-  },
-  null,
-  2
-)}
-\`\`\`
-
-# Strategic brief
-\`\`\`json
-${JSON.stringify(brief, null, 2)}
+${JSON.stringify(brief)}
 \`\`\`
 
 # CV variant to review
 \`\`\`json
-${JSON.stringify(variant, null, 2)}
+${JSON.stringify(variant)}
 \`\`\`
 
 # Task
@@ -143,8 +122,9 @@ export async function critiqueCVVariant(
   }
 
   const raw = await callJSON<unknown>({
+    cachedContext: profileContext(profile),
     system: CRITIQUE_SYSTEM,
-    user: buildCritiquePrompt(profile, brief, variant),
+    user: buildCritiquePrompt(brief, variant),
     maxTokens: 4096,
   });
 

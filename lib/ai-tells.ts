@@ -86,6 +86,8 @@ const PHRASE_RULES: PhraseRule[] = [
       "synergistic", "leverage", "leveraged", "leveraging", "utilize", "utilized",
       "utilizing", "utilisation", "utilization", "ideated", "actioned",
       "operationalized", "operationalised", "evangelized", "evangelised",
+      "seasoned", "dynamic", "holistic", "robust", "deep dive", "journey",
+      "passionate", "results-driven", "results driven",
     ],
   },
   {
@@ -115,16 +117,38 @@ const PHRASE_RULES: PhraseRule[] = [
   },
   {
     rule_id: "weak_attribution",
-    label: "Weak attribution",
-    severity: "weak",
-    why: "Distances you from your own work. If you did it, say you did it; if you didn't, name what you actually contributed.",
-    suggestion: "Either claim the action plainly, or name your specific part in it.",
+    label: "Hedge",
+    severity: "strong",
+    why: "Distances you from your own work. If you owned it, say so. If you didn't, name what you actually did.",
+    suggestion: "Claim the action plainly, or name your specific part in it.",
     phrases: [
-      "helped to", "assisted with", "was involved in", "played a key role",
-      "played a crucial role", "played an important role", "contributed to the",
-      "worked to ensure", "was responsible for helping", "had the opportunity to",
-      "was fortunate to",
+      "helped to", "helped support", "assisted with", "was involved in",
+      "involved in", "played a key role", "played a crucial role",
+      "played an important role", "contributed to", "worked to ensure",
+      "was responsible for helping", "had the opportunity to", "was fortunate to",
+      "part of the team that", "was part of", "supported the delivery of",
+      "took part in",
     ],
+  },
+  {
+    rule_id: "filler_verb",
+    label: "Filler wrapped around a verb",
+    severity: "strong",
+    why: "A real verb is buried inside a noun phrase. \"Responsible for the coordination of\" is just \"Coordinated\".",
+    suggestion: "Cut to the verb.",
+    phrases: [
+      "responsible for the", "responsible for", "tasked with", "duties included",
+      "in charge of the", "accountable for the", "the coordination of",
+      "the management of", "oversaw the management",
+    ],
+  },
+  {
+    rule_id: "adjective_string",
+    label: "Adjective string",
+    severity: "strong",
+    why: "\"Strategic, analytical and collaborative\" says nothing about you. Pick one, or show it in a bullet instead.",
+    suggestion: "Cut all three and let a bullet demonstrate it.",
+    phrases: [],
   },
   {
     rule_id: "nominalisation",
@@ -155,7 +179,81 @@ const EMPTY_INTENSIFIERS = [
 
 const NUMBER_IN_TEXT = /\d/;
 
+/** Em and en dashes. Banned outright in a CV, not merely rationed. */
+const DASH_RE = /[—–]/;
+
+/**
+ * Abstract nouns that make a profile summary true of anyone. Checked only in the
+ * summary, where they do the damage — "impact" inside a bullet with a figure
+ * attached is a different thing.
+ */
+const ABSTRACT_NOUNS = [
+  "future", "meaning", "change", "balance", "opportunities", "impact",
+  "excellence", "growth mindset", "passion", "journey", "value", "vision",
+  "potential", "synergy",
+];
+
+/** Openers that delay the point. */
+const WARM_UP_OPENERS = [
+  "experienced professional", "seasoned professional", "highly motivated",
+  "results-oriented", "a strong background in", "with a strong background",
+  "with a proven track record", "dedicated professional", "accomplished professional",
+];
+
+/** Words a CV bullet has no business containing. */
+const BULLET_PRONOUNS = /\b(i|my|me|we|our|us)\b/i;
+
+/** Openers that mean the bullet is not starting with a past-tense verb. */
+const NON_VERB_OPENERS = new Set([
+  "responsible", "accountable", "key", "successful", "successfully", "strong",
+  "the", "a", "an", "this", "acting", "working", "helping", "supporting",
+  "managing", "leading", "driving", "delivering", "building", "owning",
+]);
+
+/** Joins that usually mean two separate bullets got merged into one. */
+const TWO_IDEA_JOINS = [
+  ", and ", "; ", " while also ", " in addition to ", " as well as ",
+];
+
+/** Two rendered lines at the template's geometry. */
+const MAX_BULLET_CHARS = 180;
+
+/**
+ * "Strategic, analytical and collaborative" — three adjectives in a row.
+ * Lower-case only, so a list of proper nouns ("SQL, Python and dbt") is not
+ * mistaken for one, and at least two of the three must look like adjectives.
+ */
+// No trailing -y: it matches far more business nouns (privacy, policy, delivery,
+// company) than adjectives, and a list of departments is not an adjective string.
+const ADJECTIVE_SUFFIX = /(ic|al|ive|ent|ant|ous|ful|able|ible)$/;
+
+function adjectiveStringIn(sentence: string): string | null {
+  const match = sentence.match(/\b([a-z]{4,}), ([a-z]{4,})(?:,)? and ([a-z]{4,})\b/);
+  if (!match) return null;
+  const words = [match[1], match[2], match[3]];
+  const adjectiveish = words.filter((w) => ADJECTIVE_SUFFIX.test(w)).length;
+  return adjectiveish === 3 ? match[0] : null;
+}
+
 // ------------------------------------------------------------ helpers
+
+/**
+ * Fixed phrases where a banned word is domain vocabulary rather than padding.
+ * "customer journey" is what the industry calls the thing; "my journey" is not.
+ */
+const DOMAIN_EXCEPTIONS = [
+  "customer journey",
+  "user journey",
+  "journey mapping",
+  "dynamic pricing",
+  "dynamic content",
+];
+
+function inDomainException(lower: string, phrase: string): boolean {
+  return DOMAIN_EXCEPTIONS.some(
+    (exception) => exception.includes(phrase) && lower.includes(exception)
+  );
+}
 
 function phraseRegex(phrase: string): RegExp {
   return new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi");
@@ -173,9 +271,20 @@ export type HumanityInput = {
   /** CV bullets, or letter paragraphs — one entry each. */
   segments: string[];
   kind: "cv" | "letter";
+  /**
+   * Which segment is the profile summary, if any. Summary-only rules (abstract
+   * nouns, warm-up openers) apply there and nowhere else. Defaults to 0 for a
+   * CV because cvSegments() puts the summary first; pass null when handing in
+   * bare bullets, or those rules fire on the wrong text.
+   */
+  summaryIndex?: number | null;
 };
 
-export function analyzeHumanity({ segments, kind }: HumanityInput): HumanityReport {
+export function analyzeHumanity({
+  segments,
+  kind,
+  summaryIndex = kind === "cv" ? 0 : null,
+}: HumanityInput): HumanityReport {
   const cleaned = segments.map((s) => (s ?? "").trim()).filter((s) => s.length > 0);
   const fullText = cleaned.join("\n");
   const findings: TellFinding[] = [];
@@ -191,6 +300,7 @@ export function analyzeHumanity({ segments, kind }: HumanityInput): HumanityRepo
         for (const phrase of rule.phrases) {
           const match = lower.match(phraseRegex(phrase));
           if (!match) continue;
+          if (inDomainException(lower, phrase)) continue;
           findings.push({
             rule_id: rule.rule_id,
             label: rule.label,
@@ -221,6 +331,20 @@ export function analyzeHumanity({ segments, kind }: HumanityInput): HumanityRepo
         }
       }
 
+      const adjectives = adjectiveStringIn(lower);
+      if (adjectives) {
+        const rule = PHRASE_RULES.find((r) => r.rule_id === "adjective_string")!;
+        findings.push({
+          rule_id: rule.rule_id,
+          label: rule.label,
+          severity: rule.severity,
+          why: rule.why,
+          suggestion: rule.suggestion,
+          excerpt: adjectives,
+          segment_index: segmentIndex,
+        });
+      }
+
       const intensifier = EMPTY_INTENSIFIERS.find((w) => phraseRegex(w).test(lower));
       if (intensifier) {
         findings.push({
@@ -235,6 +359,106 @@ export function analyzeHumanity({ segments, kind }: HumanityInput): HumanityRepo
       }
     }
 
+    // ---- CV-specific segment rules
+    // These encode a house style for CVs, so they are not applied to letters.
+    if (kind === "cv") {
+      const isSummary = segmentIndex === summaryIndex;
+
+      if (DASH_RE.test(segment)) {
+        findings.push({
+          rule_id: "em_dash",
+          label: "Em dash",
+          severity: "strong",
+          why: "No em dashes in a CV. They read as drafted rather than written, and a full stop or a comma always works.",
+          suggestion: "Replace with a full stop, a comma, or parentheses for scope.",
+          excerpt: segment,
+          segment_index: segmentIndex,
+        });
+      }
+
+      if (isSummary) {
+        const lowerSegment = segment.toLowerCase();
+        const abstract = ABSTRACT_NOUNS.find(
+          (w) => phraseRegex(w).test(lowerSegment) && !inDomainException(lowerSegment, w)
+        );
+        if (abstract) {
+          findings.push({
+            rule_id: "abstract_noun",
+            label: "Abstract noun in the profile",
+            severity: "strong",
+            why: `"${abstract}" is true of anyone. A summary built from words like this survives having the name swapped for someone else's.`,
+            suggestion: "Replace with what this person actually does, and for whom.",
+            excerpt: segment,
+            segment_index: segmentIndex,
+          });
+        }
+
+        const warmUp = WARM_UP_OPENERS.find((w) => phraseRegex(w).test(segment.toLowerCase()));
+        if (warmUp) {
+          findings.push({
+            rule_id: "warm_up_opener",
+            label: "Warm-up opener",
+            severity: "strong",
+            why: "The first line is spent clearing its throat. Start with what the person does.",
+            suggestion: `Delete "${warmUp}" and start at the next real word.`,
+            excerpt: segment,
+            segment_index: segmentIndex,
+          });
+        }
+      } else {
+        // Bullet shape.
+        const firstWord = words(segment)[0] ?? "";
+        if (NON_VERB_OPENERS.has(firstWord) || firstWord.endsWith("ing")) {
+          findings.push({
+            rule_id: "not_verb_first",
+            label: "Bullet doesn't start with a verb",
+            severity: "weak",
+            why: `Starts with "${firstWord}". A recruiter scanning first words needs a past-tense verb there.`,
+            suggestion: "Rewrite so the first word is what you did: Led, Ran, Built, Cut, Grew.",
+            excerpt: segment,
+            segment_index: segmentIndex,
+          });
+        }
+
+        const pronoun = segment.match(BULLET_PRONOUNS);
+        if (pronoun) {
+          findings.push({
+            rule_id: "pronoun_in_bullet",
+            label: "Pronoun in a bullet",
+            severity: "weak",
+            why: "CV bullets drop the pronoun. The reader already knows whose CV this is.",
+            suggestion: `Cut "${pronoun[0]}".`,
+            excerpt: segment,
+            segment_index: segmentIndex,
+          });
+        }
+
+        const join = TWO_IDEA_JOINS.find((j) => segment.toLowerCase().includes(j));
+        if (join) {
+          findings.push({
+            rule_id: "two_ideas",
+            label: "Two ideas in one bullet",
+            severity: "weak",
+            why: `Joined by "${join.trim()}". Two ideas means two bullets, or one of them gets cut.`,
+            suggestion: "Split it, or drop the weaker half.",
+            excerpt: segment,
+            segment_index: segmentIndex,
+          });
+        }
+
+        if (segment.length > MAX_BULLET_CHARS) {
+          findings.push({
+            rule_id: "bullet_too_long",
+            label: "Bullet runs past two lines",
+            severity: "weak",
+            why: `${segment.length} characters — around three rendered lines. Skimmability is the governing constraint.`,
+            suggestion: "Cut to the outcome and the scope.",
+            excerpt: segment,
+            segment_index: segmentIndex,
+          });
+        }
+      }
+    }
   });
 
   // ---- document-level rules

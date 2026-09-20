@@ -58,7 +58,7 @@ function digestSession(session: ApplicationSession): SessionDigest {
 
   const rejected: SessionDigest["rejected_annotations"] = [];
   const accepted: SessionDigest["accepted_annotations"] = [];
-  for (const ann of session.critique.annotations) {
+  for (const ann of session.critique?.annotations ?? []) {
     const resp = responseByKey.get(`${ann.target_section}::${ann.target_text}`);
     if (resp === "reject") {
       rejected.push({
@@ -85,7 +85,7 @@ function digestSession(session: ApplicationSession): SessionDigest {
       gap_acknowledgement: 0,
       closing: 0,
     },
-    scores: session.critique.scores,
+    scores: session.critique?.scores ?? null,
     verdict: session.feedback.overall_verdict,
     overall_comment: session.feedback.overall_comment,
     pattern_flags: session.feedback.pattern_flags,
@@ -102,12 +102,12 @@ function buildPrompt(
   const digests = sessions.map(digestSession);
   return `# Aggregate stats
 \`\`\`json
-${JSON.stringify(stats, null, 2)}
+${JSON.stringify(stats)}
 \`\`\`
 
 # Session digests
 \`\`\`json
-${JSON.stringify(digests, null, 2)}
+${JSON.stringify(digests)}
 \`\`\`
 
 # Proposals the aggregator already produced (DO NOT duplicate)

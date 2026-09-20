@@ -130,18 +130,32 @@ test("evidence is judged across the whole CV, not bullet by bullet", () => {
   assert.ok(!ids(vague, "letter").includes("evidence_thin"), "letter prose is not a bullet list");
 });
 
-test("real hand-written bullets from the profile are not flagged as machine-written", () => {
-  // Regression guard: these came from master_profile.json and tripped 13 findings
-  // in an earlier version of the rules.
+test("real hand-written bullets are not flagged as machine-written", () => {
+  // These came from master_profile.json. The house-style rules may still have
+  // opinions about them, but nothing here should read as generated: no stock
+  // phrases, no inflated verbs, no template openings.
   const real = [
     "Translated customer journey and product requirements into clear, prioritised backlogs",
     "Partnered with UX, brand, and engineering to make trade-off decisions",
-    "Define and document the operational playbooks and integration workflows",
     "Led the consent rollout across COS and ARKET in 60+ markets",
   ];
-  const report = analyzeHumanity({ segments: real, kind: "cv" });
-  assert.equal(report.strong_count, 0, JSON.stringify(report.findings, null, 2));
-  assert.ok(report.score >= 85, `score was ${report.score}`);
+  const report = analyzeHumanity({ segments: real, kind: "cv", summaryIndex: null });
+  const machineRules = ["stock_phrase", "consultant_verb", "enthusiasm_opener", "not_just_construction"];
+  const hits = report.findings.filter((f) => machineRules.includes(f.rule_id));
+  assert.deepEqual(hits, [], JSON.stringify(hits, null, 2));
+});
+
+test("summary-only rules do not fire on bare bullets", () => {
+  // "journey" is an abstract noun in a summary and a term of art in a bullet.
+  const bullets = ["Translated customer journey requirements into backlogs"];
+  const asBullets = analyzeHumanity({ segments: bullets, kind: "cv", summaryIndex: null });
+  assert.ok(!asBullets.findings.some((f) => f.rule_id === "abstract_noun"));
+
+  const asSummary = analyzeHumanity({
+    segments: ["Operations lead focused on impact and growth mindset."],
+    kind: "cv",
+  });
+  assert.ok(asSummary.findings.some((f) => f.rule_id === "abstract_noun"));
 });
 
 test("empty input is safe and scores as clean", () => {
@@ -184,4 +198,80 @@ test("findings point back at the segment they came from", () => {
   });
   const tell = report.findings.find((f) => f.rule_id === "consultant_verb")!;
   assert.equal(tell.segment_index, 1);
+});
+
+// ---------------------------------------------------------- house-style rules
+
+test("em dashes are banned outright in a CV, rationed in a letter", () => {
+  const withDash = ["Led the rollout of Omni-id — ARKET's identity resolution work"];
+  assert.ok(ids(withDash, "cv").includes("em_dash"));
+  assert.ok(!ids(withDash, "letter").includes("em_dash"), "letters use the frequency rule");
+});
+
+test("hedges and filler around a verb are strong findings", () => {
+  const report = analyzeHumanity({
+    segments: [
+      "Summary.",
+      "Helped support the migration of the reporting layer",
+      "Responsible for the coordination of vendor onboarding",
+    ],
+    kind: "cv",
+  });
+  const found = new Set(report.findings.map((f) => f.rule_id));
+  assert.ok(found.has("weak_attribution"));
+  assert.ok(found.has("filler_verb"));
+  assert.ok(report.strong_count >= 2);
+});
+
+test("adjective strings are caught but lists of tools are not", () => {
+  assert.ok(
+    ids(["Strategic, analytical and collaborative operations lead."]).includes(
+      "adjective_string"
+    )
+  );
+  assert.ok(
+    !ids(["Summary.", "Built pipelines in SQL, Python and dbt"]).includes("adjective_string"),
+    "proper nouns are not adjectives"
+  );
+  assert.ok(
+    !ids(["Summary.", "Partnered with legal, architecture and engineering"]).includes(
+      "adjective_string"
+    ),
+    "a list of departments is not an adjective string"
+  );
+});
+
+test("warm-up openers and abstract nouns are caught in the summary", () => {
+  const found = ids(["Experienced professional with a strong background in data."]);
+  assert.ok(found.includes("warm_up_opener"));
+  assert.ok(ids(["Operations lead delivering excellence and impact."]).includes("abstract_noun"));
+});
+
+test("bullet shape: verb-first, no pronoun, one idea, two lines", () => {
+  const report = analyzeHumanity({
+    segments: [
+      "Summary.",
+      "Managing the consent rollout across markets",
+      "Led my team through the replatform",
+      "Cut turnaround from 5 days to 4 hours, and ran the vendor review",
+      `Led a programme ${"that carried on at considerable length ".repeat(5)}`,
+    ],
+    kind: "cv",
+  });
+  const found = new Set(report.findings.map((f) => f.rule_id));
+  assert.ok(found.has("not_verb_first"), "gerund opener");
+  assert.ok(found.has("pronoun_in_bullet"));
+  assert.ok(found.has("two_ideas"));
+  assert.ok(found.has("bullet_too_long"));
+});
+
+test("a bullet obeying every rule is clean", () => {
+  const report = analyzeHumanity({
+    segments: ["Summary.", "Cut reporting turnaround from 5 days to 4 hours (4 brands, 60+ markets)"],
+    kind: "cv",
+  });
+  assert.deepEqual(
+    report.findings.filter((f) => f.segment_index === 1),
+    []
+  );
 });

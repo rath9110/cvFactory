@@ -5,6 +5,9 @@ import { downloadWordDocument, openPdfPrintView } from "@/lib/client-export";
 import { cvSegments } from "@/lib/ai-tells";
 import HumanityPanel from "./humanity-panel";
 import NoteField from "./note-field";
+import CvLengthMeter from "./cv-length-meter";
+import DroppedBullets from "./dropped-bullets";
+import LineComments from "./line-comments";
 import type {
   AnnotationIssue,
   Certification,
@@ -62,6 +65,8 @@ const ISSUE_LABEL: Record<AnnotationIssue, string> = {
   voice_unnatural: "Voice off",
   good: "Strength",
 };
+
+const NEWLINE = "\n";
 
 type EditedCV = {
   profile_summary: string;
@@ -323,6 +328,30 @@ export default function CVView({
     });
   }, []);
 
+  /**
+   * Bullets are held as one newline-joined string per block, so a comment acting
+   * on "line 3" edits or removes that line and leaves the rest untouched.
+   */
+  function setBulletLine(
+    blockId: string,
+    current: string,
+    index: number,
+    text: string | null
+  ) {
+    if (!edited) return;
+    const lines = current.split(NEWLINE);
+    if (index < 0 || index >= lines.length) return;
+    if (text === null) lines.splice(index, 1);
+    else lines[index] = text;
+    setEdited({
+      ...edited,
+      experience_bullets: {
+        ...edited.experience_bullets,
+        [blockId]: lines.join(NEWLINE),
+      },
+    });
+  }
+
   const currentVariant = useMemo(() => {
     if (!result || !edited) return null;
     return rebuildVariant(edited, result.variant);
@@ -482,7 +511,7 @@ export default function CVView({
                 type="button"
                 onClick={() => onExport("pdf")}
                 disabled={exporting !== null}
-                className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="border border-stone-900 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
               >
                 {exporting === "pdf" ? "Opening…" : "Download PDF"}
               </button>
@@ -490,7 +519,7 @@ export default function CVView({
                 type="button"
                 onClick={() => onExport("doc")}
                 disabled={exporting !== null}
-                className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="border border-stone-900 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
               >
                 {exporting === "doc" ? "Exporting…" : "Download .doc"}
               </button>
@@ -498,7 +527,7 @@ export default function CVView({
                 type="button"
                 onClick={onDownloadTex}
                 disabled={downloading}
-                className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="border border-stone-900 bg-white px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
               >
                 {downloading ? "Downloading…" : "Download .tex"}
               </button>
@@ -508,7 +537,7 @@ export default function CVView({
             type="button"
             onClick={onGenerate}
             disabled={loading}
-            className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+            className="border border-stone-900 bg-stone-900 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-white hover:text-stone-900 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300 disabled:text-white"
           >
             {loading ? "Writing your CV…" : result ? "Regenerate CV" : "Generate CV"}
           </button>
@@ -524,6 +553,8 @@ export default function CVView({
             <ScoreBar label="Honesty" score={result.critique.scores.honesty} />
             <ScoreBar label="Tone fit" score={result.critique.scores.tone_fit} />
           </div>
+
+          <CvLengthMeter variant={currentVariant} profile={result.profile_snapshot} />
 
           <HumanityPanel segments={cvSegments(currentVariant)} kind="cv" />
 
@@ -552,6 +583,11 @@ export default function CVView({
               }
               rows={4}
               className="w-full rounded-md border border-stone-300 bg-white p-3 text-sm shadow-sm focus:border-stone-500 focus:outline-none"
+            />
+            <LineComments
+              lines={[edited.profile_summary]}
+              kind="summary"
+              onChange={(_, text) => setEdited({ ...edited, profile_summary: text })}
             />
             <NoteField
               value={notes["profile_summary"] ?? ""}
@@ -616,6 +652,25 @@ export default function CVView({
                       Math.min(10, value.split("\n").length + 1)
                     )}
                     className="w-full rounded-md border border-stone-300 bg-white p-3 font-mono text-xs leading-relaxed shadow-sm focus:border-stone-500 focus:outline-none"
+                  />
+                  <LineComments
+                    lines={value.split(NEWLINE)}
+                    onChange={(i, text) => setBulletLine(blockId, value, i, text)}
+                    onDelete={(i) => setBulletLine(blockId, value, i, null)}
+                  />
+                  <DroppedBullets
+                    block={block}
+                    current={value.split("\n")}
+                    onAdd={(bullet) =>
+                      setEdited({
+                        ...edited,
+                        experience_bullets: {
+                          ...edited.experience_bullets,
+                          [blockId]:
+                            value.trim().length > 0 ? `${value}\n${bullet}` : bullet,
+                        },
+                      })
+                    }
                   />
                   <NoteField
                     value={notes[`block:${blockId}`] ?? ""}

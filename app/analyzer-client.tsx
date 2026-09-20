@@ -2,8 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { StrategicBrief } from "@/lib/profile-types";
-import CoverLetterView from "./cover-letter-view";
 import CVView, { type CVPayload } from "./cv-view";
+import SaveApplication from "./save-application";
 import StrategyDetails from "./strategy-details";
 
 type AnalyzeResponse = {
@@ -18,9 +18,14 @@ export default function AnalyzerClient() {
   const [mocked, setMocked] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
 
+  // Bumped whenever the CV changes, so the save button can tell whether there
+  // is anything to save without re-rendering the editor on every keystroke.
+  const [cvRevision, setCvRevision] = useState(0);
   const cvPayloadRef = useRef<CVPayload | null>(null);
   const onCVPayloadChange = useCallback((p: CVPayload | null) => {
+    const had = cvPayloadRef.current !== null;
     cvPayloadRef.current = p;
+    if (had !== (p !== null)) setCvRevision((n) => n + 1);
   }, []);
   const getCVPayload = useCallback(() => cvPayloadRef.current, []);
 
@@ -95,8 +100,22 @@ export default function AnalyzerClient() {
       {ready && (
         <>
           <CVView getBrief={getBrief} onPayloadChange={onCVPayloadChange} />
-          <CoverLetterView jobAd={jobAd} getBrief={getBrief} getCVPayload={getCVPayload} />
+
+          <SaveApplication
+            key={cvRevision}
+            jobAd={jobAd}
+            brief={brief}
+            getCVPayload={getCVPayload}
+          />
+
           <StrategyDetails brief={brief} />
+
+          <p className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4 text-sm text-stone-600">
+            <strong className="font-medium text-stone-800">Cover letters are coming later.</strong>{" "}
+            The generator, its self-critique and the feedback capture are all still
+            in the codebase — they are just not wired into this page while the CV
+            is the focus.
+          </p>
         </>
       )}
     </div>

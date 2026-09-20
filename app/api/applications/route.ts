@@ -30,8 +30,9 @@ export async function GET() {
           updated_at: session.updated_at,
           job_snippet: jobSnippet,
           verdict: session.feedback.overall_verdict,
-          scores: session.critique.scores,
+          scores: session.critique?.scores ?? null,
           has_cv: Boolean(session.cv_variant),
+          has_letter: Boolean(session.letter_edited),
         };
       } catch {
         return null;
@@ -43,17 +44,22 @@ export async function GET() {
   });
 }
 
-const BodySchema = z.object({
-  id: z.string().optional(),
-  job_ad: z.string().min(1),
-  brief: StrategicBriefSchema,
-  letter_generated: CoverLetterSchema,
-  letter_edited: CoverLetterSchema,
-  critique: CritiqueSchema,
-  feedback: FeedbackBlockSchema,
-  cv_variant: CVVariantSchema.optional(),
-  cv_critique: CVCritiqueSchema.optional(),
-});
+const BodySchema = z
+  .object({
+    id: z.string().optional(),
+    job_ad: z.string().min(1),
+    brief: StrategicBriefSchema,
+    // A session may be a CV on its own while cover letters are parked.
+    letter_generated: CoverLetterSchema.optional(),
+    letter_edited: CoverLetterSchema.optional(),
+    critique: CritiqueSchema.optional(),
+    feedback: FeedbackBlockSchema,
+    cv_variant: CVVariantSchema.optional(),
+    cv_critique: CVCritiqueSchema.optional(),
+  })
+  .refine((b) => Boolean(b.cv_variant) || Boolean(b.letter_edited), {
+    message: "a session needs a CV or a cover letter to be worth saving",
+  });
 
 export async function POST(req: NextRequest) {
   let body: unknown;
@@ -95,10 +101,12 @@ export async function POST(req: NextRequest) {
     updated_at: now,
     job_ad: parsed.data.job_ad,
     brief: parsed.data.brief,
-    letter_generated: parsed.data.letter_generated,
-    letter_edited: parsed.data.letter_edited,
-    critique: parsed.data.critique,
     feedback: parsed.data.feedback,
+    ...(parsed.data.letter_generated && {
+      letter_generated: parsed.data.letter_generated,
+    }),
+    ...(parsed.data.letter_edited && { letter_edited: parsed.data.letter_edited }),
+    ...(parsed.data.critique && { critique: parsed.data.critique }),
     ...(parsed.data.cv_variant && { cv_variant: parsed.data.cv_variant }),
     ...(parsed.data.cv_critique && { cv_critique: parsed.data.cv_critique }),
   };

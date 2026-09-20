@@ -1,4 +1,5 @@
 import { callJSON, hasApiKey } from "./anthropic";
+import { profileContext } from "./profile-context";
 import {
   CoverLetter,
   CoverLetterSchema,
@@ -32,14 +33,9 @@ function buildUserPrompt(
   brief: StrategicBrief,
   jobAd: string
 ): string {
-  return `# Master profile
+  return `# Strategic brief (the positioning decisions for this application)
 \`\`\`json
-${JSON.stringify(profile, null, 2)}
-\`\`\`
-
-# Strategic brief (the positioning decisions for this application)
-\`\`\`json
-${JSON.stringify(brief, null, 2)}
+${JSON.stringify(brief)}
 \`\`\`
 
 # Job ad
@@ -97,6 +93,7 @@ export async function generateCoverLetter(
   }
 
   const raw = await callJSON<unknown>({
+    cachedContext: profileContext(profile),
     system: GENERATOR_SYSTEM,
     user: buildUserPrompt(profile, brief, jobAd),
     maxTokens: 4096,

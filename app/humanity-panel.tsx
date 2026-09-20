@@ -31,8 +31,13 @@ export default function HumanityPanel({
         ? "border-amber-300 bg-amber-50 text-amber-900"
         : "border-rose-300 bg-rose-50 text-rose-900";
 
-  const strong = report.findings.filter((f) => f.severity === "strong");
-  const weak = report.findings.filter((f) => f.severity === "weak");
+  // Per-line findings are shown as comments on the line itself. What is left
+  // here is the whole-CV view: the score, and the rules that are about the
+  // document rather than any one bullet.
+  const documentLevel = report.findings.filter((f) => f.segment_index < 0);
+  const inlineCount = report.findings.length - documentLevel.length;
+  const strong = documentLevel.filter((f) => f.severity === "strong");
+  const weak = documentLevel.filter((f) => f.severity === "weak");
 
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
@@ -50,13 +55,13 @@ export default function HumanityPanel({
           <span className={`rounded-md border px-3 py-1.5 text-sm font-medium ${tone}`}>
             {report.score}/100 · {report.band}
           </span>
-          {report.findings.length > 0 && (
+          {documentLevel.length > 0 && (
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
               className="text-xs font-medium text-stone-600 underline underline-offset-4"
             >
-              {open ? "Hide" : `Show ${report.findings.length}`}
+              {open ? "Hide" : `Show ${documentLevel.length}`}
             </button>
           )}
         </div>
@@ -68,18 +73,25 @@ export default function HumanityPanel({
         </p>
       )}
 
-      {open && report.findings.length > 0 && (
+      {inlineCount > 0 && (
+        <p className="mt-3 text-sm text-stone-700">
+          {inlineCount} {inlineCount === 1 ? "comment is" : "comments are"} attached to
+          the lines below, each with the fix ready to apply.
+        </p>
+      )}
+
+      {open && documentLevel.length > 0 && (
         <div className="mt-4 space-y-4">
           {strong.length > 0 && (
             <FindingGroup
-              title={`Worth fixing (${strong.length})`}
+              title={`Whole CV, worth fixing (${strong.length})`}
               findings={strong}
               className="border-rose-200 bg-rose-50"
             />
           )}
           {weak.length > 0 && (
             <FindingGroup
-              title={`Minor (${weak.length})`}
+              title={`Whole CV, minor (${weak.length})`}
               findings={weak}
               className="border-amber-200 bg-amber-50"
             />

@@ -287,6 +287,46 @@ export const CVVariantSchema = z.object({
     .describe("1-2 sentence note on what was emphasized vs. de-emphasized and why."),
 });
 
+/**
+ * What the CV generator actually returns: a *selection* over the master profile
+ * rather than a copy of it.
+ *
+ * Bullets are chosen by index into the block's canonical bullet list (see
+ * `sourceBullets`), not re-emitted as text. Two consequences: the response is
+ * roughly a quarter the size, and a bullet that does not exist in the profile
+ * cannot be expressed at all — provenance stops being a check we run afterwards
+ * and becomes a property of the format.
+ *
+ * `rewrites` is the deliberate escape hatch for "reorder or subtly reword": an
+ * explicit, per-bullet opt-in that is still validated against the bullet it
+ * claims to be rewriting.
+ */
+export const CVExperienceSelectionSchema = z.object({
+  block_id: z.string().describe("References master_profile.experience_blocks[].id"),
+  bullets: z
+    .array(z.number().int().nonnegative())
+    .describe(
+      "Indices into this block's bullets array, in the order they should appear. Omit weak bullets rather than including everything."
+    ),
+  rewrites: z
+    .record(z.string(), z.string())
+    .default({})
+    .describe(
+      "Optional. Maps a selected bullet index to a reworded version. Same facts, shifted emphasis — never new information."
+    ),
+});
+
+export const CVSelectionSchema = z.object({
+  profile_summary: z.string(),
+  experience_order: z.array(z.string()),
+  experience: z.array(CVExperienceSelectionSchema),
+  skills: z.array(CVSkillGroupVariantSchema),
+  emphasis_notes: z.string(),
+});
+
+export type CVExperienceSelection = z.infer<typeof CVExperienceSelectionSchema>;
+export type CVSelection = z.infer<typeof CVSelectionSchema>;
+
 export const CVAnnotationSchema = z.object({
   target_section: z.enum(["profile_summary", "experience", "skills"]),
   target_block_id: z
@@ -311,9 +351,12 @@ export const ApplicationSessionSchema = z.object({
   updated_at: z.string(),
   job_ad: z.string(),
   brief: StrategicBriefSchema,
-  letter_generated: CoverLetterSchema,
-  letter_edited: CoverLetterSchema,
-  critique: CritiqueSchema,
+  // The cover letter is optional: a session may be a CV on its own. Anything
+  // reading these must handle their absence — see summarizeSessions, which
+  // averages only over the sessions that actually carry a critique.
+  letter_generated: CoverLetterSchema.optional(),
+  letter_edited: CoverLetterSchema.optional(),
+  critique: CritiqueSchema.optional(),
   feedback: FeedbackBlockSchema,
   cv_variant: CVVariantSchema.optional(),
   cv_critique: CVCritiqueSchema.optional(),
@@ -348,4 +391,18 @@ export const LearningProposalSchema = z.object({
 });
 
 export type LearningProposal = z.infer<typeof LearningProposalSchema>;
+
+/**
+ * Cached output of the learning pass. The signature is a hash of the sessions and
+ * learned preferences it was computed from, so a refresh with an unchanged
+ * signature is a no-op and the model is never called twice for the same state.
+ */
+export const LearningCacheSchema = z.object({
+  signature: z.string(),
+  proposals: z.array(LearningProposalSchema),
+  mocked: z.boolean(),
+  generated_at: z.string(),
+});
+
+export type LearningCache = z.infer<typeof LearningCacheSchema>;
 export type LearningProposalSource = (typeof LEARNING_PROPOSAL_SOURCES)[number];

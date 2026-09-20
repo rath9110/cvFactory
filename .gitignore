@@ -15,6 +15,7 @@ next-env.d.ts
 
 # saved applications contain real job ads + your edits — privacy default
 /data/applications/
+/data/learning-cache.json
 
 # editor / OS
 .vscode/

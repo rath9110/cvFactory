@@ -1,4 +1,5 @@
 import type { CoverLetter, CVVariant } from "./profile-types";
+import { triggerLearningRefresh } from "./learning-trigger";
 
 /**
  * Browser-side helpers for the two export paths. Both post to /api/export;
@@ -44,6 +45,8 @@ export async function downloadWordDocument(
 ): Promise<void> {
   const res = await postExport(subject, "doc", filename);
   triggerDownload(await res.blob(), filename);
+  // Downloading is one of the moments that means "this draft is finished".
+  triggerLearningRefresh();
 }
 
 /**
@@ -71,6 +74,7 @@ export async function openPdfPrintView(subject: ExportSubject): Promise<void> {
   win.document.open();
   win.document.write(html);
   win.document.close();
+  triggerLearningRefresh();
   win.focus();
   // Let the new document lay out before raising the dialog.
   window.setTimeout(() => {

@@ -36,6 +36,12 @@ Then the loop closes: `lib/learn-aggregator.ts` (deterministic, threshold-based)
 
 `lib/anthropic.ts` holds the client and `MODEL_ID`. `callJSON()` asks for raw JSON and extracts the first `{` … last `}` from the text block; prompts therefore end with "Return ONLY the JSON object."
 
+**One profile serialisation, byte-for-byte.** `lib/profile-context.ts` is the only place the master profile is turned into prompt text, and every call that needs it passes the result as `callJSON({ cachedContext })`. That block is sent first, marked `cache_control: ephemeral`, so the analyzer writes it to cache and the CV generator, cover generator and CV critique read it back at roughly a tenth of the input price — a 58% cut in input tokens per application.
+
+Prompt caching is an exact prefix match, so **anything that varies per call goes in `system` or `user`, never in the cached block**: one differing byte and every later call silently pays full price again. Two related choices — the profile JSON is compact (indentation was 17% of its tokens) and `contact` is stripped (no prompt ever referenced it, and there's no reason to send a phone number to an API).
+
+Set `LOG_TOKEN_USAGE=1` to print per-call usage; `cache_read` stuck at 0 across a flow means the prefix is broken. Caching only engages above the model's minimum cacheable prefix, so a very small profile may legitimately never cache.
+
 **Validation happens twice, deliberately.** API routes parse the request body with zod (`safeParse`, 400 with joined issue messages on failure), and `lib/storage.ts` re-validates with `MasterProfileSchema` / `ApplicationSessionSchema` on *both* read and write. Generators additionally do semantic validation the schema can't express. `cv-generator.ts` enforces three rules the prompt only asks for politely:
 
 1. every `block_id` / `experience_order` entry must exist in the profile (throws),
@@ -45,6 +51,22 @@ Then the loop closes: `lib/learn-aggregator.ts` (deterministic, threshold-based)
 The 0.34 threshold sits in a wide empirical gap: against the real profile, verbatim bullets score 1.0, a rewording 0.93, an aggressive halving 0.54, while fabrications and bullets borrowed from a *different* block score 0.04–0.14.
 
 **Listing never validates; loading does.** `listSessions` returns every session id it can see (reading `updated_at` leniently, falling back to file mtime) so that a session which fails the schema is still visible to callers. `loadSession` is the single validation point, and callers decide what to do with a failure — `GET /api/learn` skips them and reports the ids in `skipped_session_ids`, which the learning page renders as a banner. Never reintroduce silent dropping at the listing layer.
+
+**CV house style is enforced in code, not asked for in a prompt.** The rulebook — never invent a number, no em dashes, no hedges, no filler around a verb, no inflated vocabulary, no adjective strings, no abstract nouns in the summary, verb-first bullets with one idea each — lives in `lib/ai-tells.ts` as deterministic checks, in the generator's system prompt for the text it writes freely, and in `materialiseVariant` for the parts that can be made impossible. Rules that only apply to a CV are gated on `kind === "cv"`; rules that only apply to the summary are gated on `summaryIndex`, which is explicit precisely because callers pass bare bullets too.
+
+"Never invent a number" is structural: bullets are selected by index so their figures are the profile's, and `untraceableNumber()` rejects any figure in a rewrite that isn't in its source bullet, or in the summary that isn't anywhere in the profile.
+
+**The profile is the ceiling.** Because bullets are taken verbatim, the generator cannot repair a source bullet — it can only include it or leave it out. `/profile` therefore lints `master_profile.json` against the same rules and reports what to fix there. When CV quality plateaus, look at the source material before the prompt.
+
+**The CV generator returns a selection, not a CV.** `CVSelectionSchema` is what the model produces: bullets chosen *by index* into each block's canonical list, plus an optional `rewrites` map. `materialiseVariant()` turns that into the `CVVariant` everything else already stores, edits, renders and exports — so the selection format stops at the generator's door and nothing downstream changed. Two reasons it is shaped this way: the response is roughly 58% smaller (output is billed at ~5× input), and a bullet that does not exist in the profile has no field it can be written into, so provenance is a property of the format rather than a check that runs afterwards. `rewrites` is the deliberate escape hatch, validated against the single bullet it claims to rewrite — which also catches a rewrite quietly swapping in *another* bullet's content.
+
+`sourceBullets()` in `profile-context.ts` is the only definition of bullet numbering (outcomes first, then responsibilities). The prompt, the validator and the materialiser all call it; if they ever disagreed, the generator would silently select the wrong bullets. The cached profile block presents each block with one flat `bullets` array for the same reason — the model can read an index straight off the JSON instead of counting across two arrays.
+
+**The learning pass never runs on page load.** `GET /api/learn` returns deterministic stats plus whatever `POST /api/learn/refresh` last stored; it makes no model call. The refresh is gated on a signature over the sessions and the profile's learned preferences, so repeated triggers cost nothing until something actually changes. The client fires it when work finishes — on export, on save, and on `pagehide`/`visibilitychange` (via `lib/learning-trigger.ts` and the `LearningRefreshOnExit` component in the root layout), whichever comes first. This is the only model call in the app nobody explicitly asks for, which is exactly why it is throttled at the server rather than in the browser.
+
+**A session may be a CV on its own.** `letter_generated`, `letter_edited` and `critique` are optional — cover letters are parked as a future feature and the page no longer renders `CoverLetterView`, though the generator, its critique and the feedback capture are all still in the tree and still work. Saving therefore lives at page level (`app/save-application.tsx`), not inside a draft section.
+
+The trap this creates is statistical: `summarizeSessions` averages scores and edit fractions over **`letter_session_count`, not `session_count`**. Dividing by every session would drag every average toward zero as CV-only sessions accumulate, and the aggregator's thresholds would quietly stop firing. Anything new that averages a letter-derived value has to pick the same denominator.
 
 **Consequence when changing `ApplicationSessionSchema`:** already-saved sessions must still parse. New fields need `.optional()` or `.default()`, or existing session files/keys become unreadable. `GET /api/learn` loads *every* session, so one unparseable session breaks the whole learning page (the fs `listSessions` skips malformed files, but `loadSession` throws).
 
@@ -61,6 +83,14 @@ All API routes declare `export const runtime = "nodejs"` — required by the fs 
 ## Data and privacy
 
 `data/applications/` is git-ignored — saved sessions contain real job ads and the user's own edits. `data/master_profile.json` **is** committed and contains real personal data; treat it as the user's CV, not fixture data.
+
+## Look and feel
+
+Industrial, black and white, Space Mono. The mechanism is a **palette remap** in `tailwind.config.ts`: every colour palette the app uses points at one grey ramp, so existing `text-stone-500` / `border-rose-300` classes keep working and simply stop being coloured. Severity is carried by value, not hue — emerald (fine) is lightest, rose (fix this) is near-black. `borderRadius` and `boxShadow` are globally `0` / `none`.
+
+Build new UI from those palette classes; a raw hex bypasses the system. The single accent is the hard-hat logo (`public/hard_hat_logo.png`, and `app/icon.png` for the tab). The CV preview and the export templates are exempt and keep `#1F4E79` — they are the artifact, not the tool, and the preview has to match what exports.
+
+**The dev server caches `tailwind.config.ts`.** Editing the theme and reloading shows the old palette still compiled; restart `npm run dev` after touching it.
 
 ## Export
 

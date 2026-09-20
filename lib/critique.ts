@@ -54,12 +54,12 @@ ${JSON.stringify(
 
 # Strategic brief (positioning decisions)
 \`\`\`json
-${JSON.stringify(brief, null, 2)}
+${JSON.stringify(brief)}
 \`\`\`
 
 # Draft cover letter to review
 \`\`\`json
-${JSON.stringify(letter, null, 2)}
+${JSON.stringify(letter)}
 \`\`\`
 
 # Task

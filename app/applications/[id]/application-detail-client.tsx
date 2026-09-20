@@ -108,6 +108,7 @@ function ScoreGrid({ scores }: { scores: CritiqueScores }) {
 
 function fullLetterText(session: ApplicationSession): string {
   const l = session.letter_edited;
+  if (!l) return "";
   return [
     l.opening,
     "",
@@ -173,11 +174,12 @@ export default function ApplicationDetail({ id }: { id: string }) {
   }
 
   async function onExportLetter(kind: "doc" | "pdf") {
-    if (!session) return;
+    if (!session?.letter_edited) return;
     setLetterExporting(kind);
     setExportError(null);
     try {
       const letter = session.letter_edited;
+      if (!letter) return;
       if (kind === "doc") {
         await downloadWordDocument({ letter }, `cover-letter-${id}.doc`);
       } else {
@@ -236,7 +238,7 @@ export default function ApplicationDetail({ id }: { id: string }) {
             type="button"
             onClick={() => onExportLetter("pdf")}
             disabled={letterExporting !== null}
-            className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
           >
             {letterExporting === "pdf" ? "Opening…" : "Letter PDF"}
           </button>
@@ -244,14 +246,14 @@ export default function ApplicationDetail({ id }: { id: string }) {
             type="button"
             onClick={() => onExportLetter("doc")}
             disabled={letterExporting !== null}
-            className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
           >
             {letterExporting === "doc" ? "Exporting…" : "Letter .doc"}
           </button>
           <button
             type="button"
             onClick={copyLetter}
-            className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50"
+            className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white"
           >
             Copy letter
           </button>
@@ -315,13 +317,16 @@ export default function ApplicationDetail({ id }: { id: string }) {
         </div>
       </Card>
 
-      <Card title="Critique scores">
-        <ScoreGrid scores={session.critique.scores} />
-        <p className="mt-3 text-sm leading-relaxed text-stone-700">
-          {session.critique.verdict}
-        </p>
-      </Card>
+      {session.critique && (
+        <Card title="Critique scores">
+          <ScoreGrid scores={session.critique.scores} />
+          <p className="mt-3 text-sm leading-relaxed text-stone-700">
+            {session.critique.verdict}
+          </p>
+        </Card>
+      )}
 
+      {session.letter_edited && (
       <Card title="Cover letter (your edited version)">
         <div className="space-y-3 whitespace-pre-wrap text-sm leading-relaxed">
           <p>{session.letter_edited.opening}</p>
@@ -337,8 +342,9 @@ export default function ApplicationDetail({ id }: { id: string }) {
           <p className="text-stone-500">{session.letter_edited.signoff}</p>
         </div>
       </Card>
+      )}
 
-      {session.critique.annotations.length > 0 && (
+      {session.critique && session.critique.annotations.length > 0 && (
         <Card title="Critique annotations">
           <ul className="space-y-2">
             {session.critique.annotations.map((ann, i) => (
@@ -559,7 +565,7 @@ function SavedCV({
               type="button"
               onClick={() => onExport("pdf")}
               disabled={exporting !== null}
-              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
             >
               {exporting === "pdf" ? "Opening…" : "Download PDF"}
             </button>
@@ -567,7 +573,7 @@ function SavedCV({
               type="button"
               onClick={() => onExport("doc")}
               disabled={exporting !== null}
-              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
             >
               {exporting === "doc" ? "Exporting…" : "Download .doc"}
             </button>
@@ -575,7 +581,7 @@ function SavedCV({
               type="button"
               onClick={onDownload}
               disabled={downloading}
-              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="border border-stone-900 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] hover:bg-stone-900 hover:text-white disabled:cursor-not-allowed disabled:border-stone-300 disabled:text-stone-400"
             >
               {downloading ? "Downloading…" : "Download .tex"}
             </button>
@@ -669,12 +675,18 @@ function RegenerateSection({
   onRegenerate: () => void;
 }) {
   const sectionDeltas = useMemo(
-    () => (result ? letterSectionDeltas(session.letter_edited, result.letter) : null),
+    () =>
+      result && session.letter_edited
+        ? letterSectionDeltas(session.letter_edited, result.letter)
+        : null,
     [result, session.letter_edited]
   );
   const sDeltas = useMemo(
-    () => (result ? scoreDeltas(session.critique.scores, result.critique.scores) : null),
-    [result, session.critique.scores]
+    () =>
+      result && session.critique
+        ? scoreDeltas(session.critique.scores, result.critique.scores)
+        : null,
+    [result, session.critique]
   );
   const leadWithDelta = useMemo(
     () =>
@@ -695,7 +707,7 @@ function RegenerateSection({
           type="button"
           onClick={onRegenerate}
           disabled={regenerating}
-          className="rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+          className="border border-stone-900 bg-stone-900 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-white hover:text-stone-900 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300 disabled:text-white"
         >
           {regenerating
             ? "Regenerating…"
@@ -819,17 +831,22 @@ function RegenerateSection({
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
                 Saved letter (final edited version)
               </h3>
+              {!session.letter_edited && (
+                <p className="text-stone-500">
+                  This application was saved as a CV only.
+                </p>
+              )}
               <div className="space-y-2 whitespace-pre-wrap leading-relaxed">
-                <p>{session.letter_edited.opening}</p>
-                {session.letter_edited.bridge.map((p, i) => (
+                <p>{session.letter_edited?.opening}</p>
+                {(session.letter_edited?.bridge ?? []).map((p, i) => (
                   <p key={i}>{p.text}</p>
                 ))}
-                {session.letter_edited.gap_acknowledgement && (
+                {session.letter_edited?.gap_acknowledgement && (
                   <p className="text-stone-700">
                     {session.letter_edited.gap_acknowledgement}
                   </p>
                 )}
-                <p>{session.letter_edited.closing}</p>
+                <p>{session.letter_edited?.closing}</p>
               </div>
             </div>
             <div className="rounded-lg border border-stone-200 bg-white p-4 text-sm">

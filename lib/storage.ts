@@ -4,6 +4,8 @@ import { Redis } from "@upstash/redis";
 import {
   ApplicationSession,
   ApplicationSessionSchema,
+  LearningCache,
+  LearningCacheSchema,
   MasterProfile,
   MasterProfileSchema,
 } from "./profile-types";
@@ -18,6 +20,9 @@ export type Storage = {
   loadSession(id: string): Promise<ApplicationSession>;
   listSessions(): Promise<Array<{ id: string; updated_at: string }>>;
   deleteSession(id: string): Promise<boolean>;
+  /** Cached learning-pass output. Null when nothing has been computed yet. */
+  loadLearningCache(): Promise<LearningCache | null>;
+  saveLearningCache(cache: LearningCache): Promise<void>;
 };
 
 function validProfile(raw: unknown): MasterProfile {
@@ -40,6 +45,7 @@ function fsStorage(): Storage {
   const dataDir = path.join(process.cwd(), "data");
   const profilePath = path.join(dataDir, "master_profile.json");
   const appsDir = path.join(dataDir, "applications");
+  const learningCachePath = path.join(dataDir, "learning-cache.json");
 
   async function ensureAppsDir() {
     await fs.mkdir(appsDir, { recursive: true });
@@ -120,6 +126,25 @@ function fsStorage(): Storage {
       }
     },
 
+    async loadLearningCache() {
+      try {
+        const raw = await fs.readFile(learningCachePath, "utf8");
+        return LearningCacheSchema.parse(JSON.parse(raw));
+      } catch {
+        // Missing or unreadable cache simply means "not computed yet".
+        return null;
+      }
+    },
+
+    async saveLearningCache(cache) {
+      await fs.mkdir(dataDir, { recursive: true });
+      await fs.writeFile(
+        learningCachePath,
+        JSON.stringify(LearningCacheSchema.parse(cache), null, 2),
+        "utf8"
+      );
+    },
+
     async deleteSession(id) {
       try {
         await fs.unlink(fileFor(id));
@@ -147,6 +172,7 @@ function redisStorage(): Storage {
   const PROFILE_KEY = "cvfactory:profile";
   const SESSION_PREFIX = "cvfactory:session:";
   const SESSION_INDEX = "cvfactory:session_index"; // hash: id -> updated_at
+  const LEARNING_CACHE_KEY = "cvfactory:learning_cache";
 
   function sessionKey(id: string): string {
     assertId(id);
@@ -197,6 +223,21 @@ function redisStorage(): Storage {
       return Object.entries(index)
         .map(([id, updated_at]) => ({ id, updated_at: String(updated_at) }))
         .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+    },
+
+    async loadLearningCache() {
+      const raw = await redis.get<unknown>(LEARNING_CACHE_KEY);
+      if (raw == null) return null;
+      try {
+        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+        return LearningCacheSchema.parse(parsed);
+      } catch {
+        return null;
+      }
+    },
+
+    async saveLearningCache(cache) {
+      await redis.set(LEARNING_CACHE_KEY, JSON.stringify(LearningCacheSchema.parse(cache)));
     },
 
     async deleteSession(id) {

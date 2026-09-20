@@ -1,4 +1,5 @@
 import { callJSON, hasApiKey } from "./anthropic";
+import { profileContext } from "./profile-context";
 import {
   MasterProfile,
   StrategicBrief,
@@ -16,13 +17,8 @@ Rules:
 - Respect the candidate's tone_rules and positioning_tensions when proposing what to lead with.
 - Output ONLY valid JSON matching the requested schema. No prose before or after.`;
 
-function buildUserPrompt(profile: MasterProfile, jobAd: string): string {
-  return `# Candidate master profile
-\`\`\`json
-${JSON.stringify(profile, null, 2)}
-\`\`\`
-
-# Job ad
+function buildUserPrompt(jobAd: string): string {
+  return `# Job ad
 \`\`\`
 ${jobAd}
 \`\`\`
@@ -113,8 +109,9 @@ export async function analyzeJobAd(
   }
 
   const raw = await callJSON<unknown>({
+    cachedContext: profileContext(profile),
     system: ANALYZER_SYSTEM,
-    user: buildUserPrompt(profile, jobAd),
+    user: buildUserPrompt(jobAd),
     maxTokens: 4096,
   });
 

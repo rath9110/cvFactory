@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { LearnedPreference, MasterProfile } from "@/lib/profile-types";
+import HouseStyleCheck from "./house-style-check";
 
 type ProfileResponse = { profile: MasterProfile };
 
@@ -108,6 +109,8 @@ export default function ProfileClient() {
 
   return (
     <div className="space-y-8">
+      <HouseStyleCheck profile={profile} />
+
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm md:col-span-2">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">

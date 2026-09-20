@@ -4,6 +4,7 @@ import {
   ANNOTATION_ISSUES,
   AnnotationIssue,
   ApplicationSession,
+  CritiqueScores,
   LearningProposal,
   OVERALL_VERDICTS,
   OverallVerdict,
@@ -37,6 +38,9 @@ export type AggregateStats = {
   session_count: number;
   session_ids: string[];
   avg_scores: { relevance: number; specificity: number; honesty: number; tone_fit: number };
+  /** How many sessions carried a cover letter — the denominator for avg_scores
+   *  and avg_section_edit_fraction. Sessions saved as a CV alone are excluded. */
+  letter_session_count: number;
   verdict_counts: Record<OverallVerdict | "unset", number>;
   annotation_stats_by_issue: AnnotationStatsByIssue;
   pattern_flags: PatternFlagAggregate[];
@@ -46,7 +50,8 @@ export type AggregateStats = {
 export type SessionSummary = {
   id: string;
   updated_at: string;
-  scores: ApplicationSession["critique"]["scores"];
+  /** Null for a CV-only session, which was never critiqued as a letter. */
+  scores: CritiqueScores | null;
   verdict: OverallVerdict | null;
   pattern_flag_count: number;
   section_edit_fractions: SectionEditStats;
@@ -69,6 +74,9 @@ function emptyIssueStats(): AnnotationStatsByIssue {
 }
 
 function sectionEdits(session: ApplicationSession): SectionEditStats {
+  if (!session.letter_generated || !session.letter_edited) {
+    return { opening: 0, gap_acknowledgement: 0, closing: 0, bridge_avg: 0 };
+  }
   const opening = editFraction(
     session.letter_generated.opening,
     session.letter_edited.opening
@@ -125,13 +133,18 @@ export function summarizeSessions(sessions: ApplicationSession[]): {
   };
   const perSession: SessionSummary[] = [];
 
+  let letterSessions = 0;
+
   for (const s of sessions) {
-    scoreSum = {
-      relevance: scoreSum.relevance + s.critique.scores.relevance,
-      specificity: scoreSum.specificity + s.critique.scores.specificity,
-      honesty: scoreSum.honesty + s.critique.scores.honesty,
-      tone_fit: scoreSum.tone_fit + s.critique.scores.tone_fit,
-    };
+    if (s.critique) {
+      letterSessions += 1;
+      scoreSum = {
+        relevance: scoreSum.relevance + s.critique.scores.relevance,
+        specificity: scoreSum.specificity + s.critique.scores.specificity,
+        honesty: scoreSum.honesty + s.critique.scores.honesty,
+        tone_fit: scoreSum.tone_fit + s.critique.scores.tone_fit,
+      };
+    }
 
     if (s.feedback.overall_verdict) {
       verdictCounts[s.feedback.overall_verdict] += 1;
@@ -144,7 +157,7 @@ export function summarizeSessions(sessions: ApplicationSession[]): {
       responseByText.set(`${r.annotation_section}::${r.annotation_target_text}`, r.response);
     }
 
-    for (const ann of s.critique.annotations) {
+    for (const ann of s.critique?.annotations ?? []) {
       const bucket = issueStats[ann.issue];
       bucket.total += 1;
       const key = `${ann.target_section}::${ann.target_text}`;
@@ -176,16 +189,20 @@ export function summarizeSessions(sessions: ApplicationSession[]): {
     perSession.push({
       id: s.id,
       updated_at: s.updated_at,
-      scores: s.critique.scores,
+      scores: s.critique?.scores ?? null,
       verdict: s.feedback.overall_verdict,
       pattern_flag_count: s.feedback.pattern_flags.length,
       section_edit_fractions: edits,
     });
   }
 
-  const n = Math.max(1, sessions.length);
+  // Letter-derived averages divide by the number of sessions that HAVE a letter.
+  // Dividing by every session would drag every average toward zero as CV-only
+  // sessions accumulate, and the aggregator's thresholds would stop firing.
+  const n = Math.max(1, letterSessions);
   const stats: AggregateStats = {
     session_count: sessions.length,
+    letter_session_count: letterSessions,
     session_ids: sessions.map((s) => s.id),
     avg_scores: {
       relevance: scoreSum.relevance / n,
@@ -260,7 +277,7 @@ export function deriveAggregatorProposals(
     { key: "gap_acknowledgement", label: "gap acknowledgement" },
     { key: "closing", label: "closing" },
   ];
-  if (sessions.length >= 2) {
+  if (stats.letter_session_count >= 2) {
     for (const { key, label } of sectionLabels) {
       if (editStats[key] >= HIGH_EDIT_THRESHOLD) {
         proposals.push({
