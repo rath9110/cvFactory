@@ -200,7 +200,16 @@ Without `APP_AUTH_TOKEN`, the app is open — the local-dev default.
    - `APP_AUTH_TOKEN` — a long random string
 5. Deploy. Visit `/login`, enter the token, you're in. The first time you generate, you'll get `Master profile not initialised in Redis` until you seed it.
 
+## Phase 10 — PDF and Word export
+
+Both artefacts now leave the app in formats a recruiter can open:
+
+- **Download PDF** opens a print-ready A4 view and raises the print dialog — pick "Save as PDF". Vector output, real text, no server-side PDF engine.
+- **Download .doc** downloads a Word-openable document (headings, bullets, and page setup intact) for when you want to tweak wording in Word or upload to a portal that demands .doc/.docx.
+- **Download .tex** is unchanged for the CV.
+
+Available on the analyzer page (for the CV variant and the edited cover letter) and on `/applications/<id>` (for the saved letter and the saved CV variant). Exports always re-read `master_profile.json` server-side for the name and contact line, so a profile edit is reflected in old sessions' exports.
+
 ## Known gaps (deferred)
 
-- Bullet-level traceability: today the generator validates only `block_id`s, not individual bullet provenance. Could be tightened to require each variant bullet either matches a master bullet substring or is flagged as a paraphrase.
 - Resume editing of a saved session: opening `/applications/<id>` is currently read-only. Re-hydrating analyzer + cover + CV state from a saved session is a candidate for a later pass.

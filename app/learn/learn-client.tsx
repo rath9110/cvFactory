@@ -13,6 +13,7 @@ type LearnResponse = {
   proposals: LearningProposal[];
   mocked: boolean;
   accepted_count: number;
+  skipped_session_ids?: string[];
 };
 
 type ProposalState =
@@ -112,13 +113,17 @@ export default function LearnClient() {
   if (!data) return null;
 
   const { stats, per_session, proposals, mocked, accepted_count } = data;
+  const skipped = data.skipped_session_ids ?? [];
 
   if (stats.session_count === 0) {
     return (
-      <div className="rounded-lg border border-stone-200 bg-white p-6 text-sm text-stone-600">
+      <div className="space-y-4">
+        <SkippedBanner ids={skipped} />
+        <div className="rounded-lg border border-stone-200 bg-white p-6 text-sm text-stone-600">
         No saved applications yet. Generate a cover letter on the analyzer page and
         click <strong>Save application</strong> — then come back here to see
-        patterns aggregate.
+          patterns aggregate.
+        </div>
       </div>
     );
   }
@@ -131,6 +136,8 @@ export default function LearnClient() {
           for nuanced pattern detection beyond the deterministic aggregator.
         </div>
       )}
+
+      <SkippedBanner ids={skipped} />
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
@@ -365,6 +372,21 @@ export default function LearnClient() {
           </table>
         </div>
       </section>
+    </div>
+  );
+}
+
+function SkippedBanner({ ids }: { ids: string[] }) {
+  if (ids.length === 0) return null;
+  return (
+    <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900">
+      <strong>
+        {ids.length} saved {ids.length === 1 ? "session" : "sessions"} could not be
+        read
+      </strong>{" "}
+      and {ids.length === 1 ? "was" : "were"} left out of these stats:{" "}
+      <code className="break-all">{ids.join(", ")}</code>. They are most likely from
+      before a schema change — the rest of the page is unaffected.
     </div>
   );
 }

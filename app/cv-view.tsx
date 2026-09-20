@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { downloadWordDocument, openPdfPrintView } from "@/lib/client-export";
 import type {
   AnnotationIssue,
   Certification,
@@ -299,6 +300,7 @@ export default function CVView({
 }) {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [exporting, setExporting] = useState<null | "doc" | "pdf">(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CvApiResponse | null>(null);
   const [edited, setEdited] = useState<EditedCV | null>(null);
@@ -377,6 +379,23 @@ export default function CVView({
     }
   }
 
+  async function onExport(kind: "doc" | "pdf") {
+    if (!currentVariant) return;
+    setExporting(kind);
+    setError(null);
+    try {
+      if (kind === "doc") {
+        await downloadWordDocument({ variant: currentVariant }, "cv.doc");
+      } else {
+        await openPdfPrintView({ variant: currentVariant });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setExporting(null);
+    }
+  }
+
   function applyAnnotationRewrite(ann: CVAnnotation) {
     if (!ann.suggested_rewrite || !edited) return;
     const rewrite = ann.suggested_rewrite;
@@ -438,14 +457,32 @@ export default function CVView({
         <h2 className="text-lg font-semibold">CV variant</h2>
         <div className="flex gap-2">
           {result && currentVariant && (
-            <button
-              type="button"
-              onClick={onDownloadTex}
-              disabled={downloading}
-              className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {downloading ? "Downloading…" : "Download .tex"}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => onExport("pdf")}
+                disabled={exporting !== null}
+                className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {exporting === "pdf" ? "Opening…" : "Download PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => onExport("doc")}
+                disabled={exporting !== null}
+                className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {exporting === "doc" ? "Exporting…" : "Download .doc"}
+              </button>
+              <button
+                type="button"
+                onClick={onDownloadTex}
+                disabled={downloading}
+                className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {downloading ? "Downloading…" : "Download .tex"}
+              </button>
+            </>
           )}
           <button
             type="button"

@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-export const MODEL_ID = "claude-sonnet-4-6";
+export const MODEL_ID = "claude-sonnet-5";
 
 let cached: Anthropic | null = null;
 

@@ -13,6 +13,7 @@ import type {
   OverallVerdict,
   StrategicBrief,
 } from "@/lib/profile-types";
+import { downloadWordDocument, openPdfPrintView } from "@/lib/client-export";
 import {
   letterSectionDeltas,
   scoreDeltas,
@@ -127,6 +128,8 @@ export default function ApplicationDetail({ id }: { id: string }) {
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateError, setRegenerateError] = useState<string | null>(null);
   const [regenerated, setRegenerated] = useState<RegenerateResponse | null>(null);
+  const [letterExporting, setLetterExporting] = useState<null | "doc" | "pdf">(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +169,24 @@ export default function ApplicationDetail({ id }: { id: string }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
       setDeleting(false);
+    }
+  }
+
+  async function onExportLetter(kind: "doc" | "pdf") {
+    if (!session) return;
+    setLetterExporting(kind);
+    setExportError(null);
+    try {
+      const letter = session.letter_edited;
+      if (kind === "doc") {
+        await downloadWordDocument({ letter }, `cover-letter-${id}.doc`);
+      } else {
+        await openPdfPrintView({ letter });
+      }
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setLetterExporting(null);
     }
   }
 
@@ -210,7 +231,23 @@ export default function ApplicationDetail({ id }: { id: string }) {
           Created {new Date(session.created_at).toLocaleString()} · Updated{" "}
           {new Date(session.updated_at).toLocaleString()}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onExportLetter("pdf")}
+            disabled={letterExporting !== null}
+            className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {letterExporting === "pdf" ? "Opening…" : "Letter PDF"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onExportLetter("doc")}
+            disabled={letterExporting !== null}
+            className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {letterExporting === "doc" ? "Exporting…" : "Letter .doc"}
+          </button>
           <button
             type="button"
             onClick={copyLetter}
@@ -228,6 +265,8 @@ export default function ApplicationDetail({ id }: { id: string }) {
           </button>
         </div>
       </div>
+
+      {exportError && <p className="text-sm text-rose-700">{exportError}</p>}
 
       <Card title="Job ad">
         <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-stone-800">
@@ -440,9 +479,27 @@ function SavedCV({
   critique: ApplicationSession["cv_critique"];
 }) {
   const [downloading, setDownloading] = useState(false);
+  const [exporting, setExporting] = useState<null | "doc" | "pdf">(null);
   const [error, setError] = useState<string | null>(null);
 
   if (!variant || !critique) return null;
+
+  async function onExport(kind: "doc" | "pdf") {
+    if (!variant) return;
+    setExporting(kind);
+    setError(null);
+    try {
+      if (kind === "doc") {
+        await downloadWordDocument({ variant }, `cv-${sessionId}.doc`);
+      } else {
+        await openPdfPrintView({ variant });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setExporting(null);
+    }
+  }
 
   async function onDownload() {
     setDownloading(true);
@@ -482,14 +539,32 @@ function SavedCV({
       <Card title="CV variant — emphasis notes">
         <div className="flex items-start justify-between gap-3">
           <p className="flex-1 text-sm leading-relaxed">{variant.emphasis_notes}</p>
-          <button
-            type="button"
-            onClick={onDownload}
-            disabled={downloading}
-            className="shrink-0 rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {downloading ? "Downloading…" : "Download .tex"}
-          </button>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onExport("pdf")}
+              disabled={exporting !== null}
+              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exporting === "pdf" ? "Opening…" : "Download PDF"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onExport("doc")}
+              disabled={exporting !== null}
+              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exporting === "doc" ? "Exporting…" : "Download .doc"}
+            </button>
+            <button
+              type="button"
+              onClick={onDownload}
+              disabled={downloading}
+              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {downloading ? "Downloading…" : "Download .tex"}
+            </button>
+          </div>
         </div>
         {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
       </Card>

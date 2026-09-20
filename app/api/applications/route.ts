@@ -78,9 +78,20 @@ export async function POST(req: NextRequest) {
   const now = new Date().toISOString();
   const id = parsed.data.id ?? newApplicationId();
 
+  // Upsert: a re-save must keep the session's original creation time.
+  let createdAt = now;
+  if (parsed.data.id) {
+    try {
+      const existing = await loadSession(parsed.data.id);
+      createdAt = existing.created_at;
+    } catch {
+      // No readable prior version — treat this as a fresh session.
+    }
+  }
+
   const session = {
     id,
-    created_at: now,
+    created_at: createdAt,
     updated_at: now,
     job_ad: parsed.data.job_ad,
     brief: parsed.data.brief,

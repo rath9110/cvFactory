@@ -1,4 +1,5 @@
 import { callJSON, hasApiKey } from "./anthropic";
+import { jaccardSimilarity } from "./diff";
 import {
   CVVariant,
   CVVariantSchema,
@@ -93,6 +94,39 @@ function mockCVVariant(profile: MasterProfile, brief: StrategicBrief): CVVariant
   };
 }
 
+// A variant bullet may be reordered or reworded, but it must stay recognisably the
+// same bullet as one in the source block. Below this token-overlap score there is no
+// plausible source left and the model has invented content.
+const BULLET_PROVENANCE_THRESHOLD = 0.34;
+
+function bestSourceOverlap(bullet: string, sourceBullets: string[]): number {
+  let best = 0;
+  for (const source of sourceBullets) {
+    const score = jaccardSimilarity(bullet, source);
+    if (score > best) best = score;
+  }
+  return best;
+}
+
+/** Items the model returns must exist somewhere in the profile's taxonomy. */
+function filterInventedSkills(
+  skills: CVVariant["skills"],
+  profile: MasterProfile
+): CVVariant["skills"] {
+  const known = new Map<string, string>();
+  for (const group of profile.skills_taxonomy) {
+    for (const item of group.items) known.set(item.trim().toLowerCase(), item);
+  }
+  return skills
+    .map((group) => ({
+      category: group.category,
+      items: group.items
+        .map((item) => known.get(item.trim().toLowerCase()))
+        .filter((item): item is string => Boolean(item)),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
 export async function generateCVVariant(
   profile: MasterProfile,
   brief: StrategicBrief
@@ -109,17 +143,35 @@ export async function generateCVVariant(
 
   const parsed = CVVariantSchema.parse(raw);
 
-  const validBlockIds = new Set(profile.experience_blocks.map((b) => b.id));
+  const blocksById = new Map(profile.experience_blocks.map((b) => [b.id, b]));
   for (const blockId of parsed.experience_order) {
-    if (!validBlockIds.has(blockId)) {
+    if (!blocksById.has(blockId)) {
       throw new Error(`Generator returned unknown experience block id: ${blockId}`);
     }
   }
-  for (const exp of parsed.experience) {
-    if (!validBlockIds.has(exp.block_id)) {
+
+  const experience = parsed.experience.map((exp) => {
+    const block = blocksById.get(exp.block_id);
+    if (!block) {
       throw new Error(`Generator returned unknown experience block id: ${exp.block_id}`);
     }
-  }
+    const sourceBullets = [...block.responsibilities, ...block.outcomes];
+    const bullets = exp.bullets.filter((b) => b.trim().length > 0);
+    for (const bullet of bullets) {
+      if (bestSourceOverlap(bullet, sourceBullets) < BULLET_PROVENANCE_THRESHOLD) {
+        throw new Error(
+          `Generator returned a bullet with no source in block '${exp.block_id}': "${bullet}"`
+        );
+      }
+    }
+    return { block_id: exp.block_id, bullets };
+  });
 
-  return { variant: parsed, mocked: false };
+  const variant: CVVariant = {
+    ...parsed,
+    experience,
+    skills: filterInventedSkills(parsed.skills, profile),
+  };
+
+  return { variant, mocked: false };
 }

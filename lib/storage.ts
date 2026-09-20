@@ -89,13 +89,28 @@ function fsStorage(): Storage {
         for (const file of entries) {
           if (!file.endsWith(".json")) continue;
           const id = file.slice(0, -".json".length);
+          const full = path.join(appsDir, file);
+          // Listing deliberately does NOT validate. A session that fails the
+          // schema still belongs in the list so callers can report it, rather
+          // than it disappearing with no trace. loadSession is the one place
+          // that validates.
+          let updatedAt = "";
           try {
-            const raw = await fs.readFile(path.join(appsDir, file), "utf8");
-            const session = validSession(JSON.parse(raw));
-            results.push({ id, updated_at: session.updated_at });
+            const raw = await fs.readFile(full, "utf8");
+            const parsed: unknown = JSON.parse(raw);
+            const candidate =
+              parsed && typeof parsed === "object"
+                ? (parsed as { updated_at?: unknown }).updated_at
+                : undefined;
+            if (typeof candidate === "string") updatedAt = candidate;
           } catch {
-            // Skip malformed files
+            // Unreadable or not JSON — fall back to the file's own timestamp.
           }
+          if (!updatedAt) {
+            const stat = await fs.stat(full).catch(() => null);
+            updatedAt = (stat?.mtime ?? new Date(0)).toISOString();
+          }
+          results.push({ id, updated_at: updatedAt });
         }
         results.sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
         return results;

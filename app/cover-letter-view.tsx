@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { downloadWordDocument, openPdfPrintView } from "@/lib/client-export";
 import type {
   Annotation,
   AnnotationIssue,
@@ -211,6 +212,7 @@ export default function CoverLetterView({
   const [overallVerdict, setOverallVerdict] = useState<OverallVerdict | null>(null);
   const [overallComment, setOverallComment] = useState("");
 
+  const [exporting, setExporting] = useState<null | "doc" | "pdf">(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>({ kind: "idle" });
 
@@ -354,11 +356,10 @@ export default function CoverLetterView({
     setPatternFlags((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  async function onSave() {
-    if (!result || !edited) return;
-    setSaveState({ kind: "saving" });
-
-    const letterEdited: CoverLetter = {
+  /** The letter as currently edited — what gets saved and what gets exported. */
+  function buildEditedLetter(): CoverLetter | null {
+    if (!result || !edited) return null;
+    return {
       recipient: result.letter.recipient,
       opening: edited.opening,
       bridge: edited.bridge.map((text, i) => ({
@@ -372,6 +373,31 @@ export default function CoverLetterView({
       closing: edited.closing,
       signoff: result.letter.signoff,
     };
+  }
+
+  async function onExport(kind: "doc" | "pdf") {
+    const letter = buildEditedLetter();
+    if (!letter) return;
+    setExporting(kind);
+    setError(null);
+    try {
+      if (kind === "doc") {
+        await downloadWordDocument({ letter }, "cover-letter.doc");
+      } else {
+        await openPdfPrintView({ letter });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function onSave() {
+    if (!result || !edited) return;
+    const letterEdited = buildEditedLetter();
+    if (!letterEdited) return;
+    setSaveState({ kind: "saving" });
 
     const feedback: FeedbackBlock = {
       overall_verdict: overallVerdict,
@@ -658,6 +684,22 @@ export default function CoverLetterView({
                 : applicationId
                   ? "Save changes"
                   : "Save application"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onExport("pdf")}
+              disabled={exporting !== null}
+              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exporting === "pdf" ? "Opening…" : "Download PDF"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onExport("doc")}
+              disabled={exporting !== null}
+              className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {exporting === "doc" ? "Exporting…" : "Download .doc"}
             </button>
             <button
               type="button"
